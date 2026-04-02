@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useEditMode } from './context';
 
 /**
  * Visual Edit mode: hover to highlight elements, click to select, type a prompt.
- * Saves structured { element context + prompt } for Claude to apply.
+ * Uses a full-viewport overlay (z-index 9998) so the toolbar (z-index 9999) sits
+ * above it and receives clicks naturally — no capture-phase interception needed.
  */
 export function VisualEditPicker() {
   const { isVisualMode, addVisualEdit, visualEdits, removeVisualEdit } = useEditMode();
@@ -17,67 +18,44 @@ export function VisualEditPicker() {
   const [prompt, setPrompt] = useState('');
   const [flash, setFlash] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
-  // ── Element picker (hover + click) ──
-  useEffect(() => {
-    if (!isVisualMode || selectedEl) return;
+  // Hide overlay briefly to hit-test the element underneath, then restore.
+  const getUnderlyingEl = useCallback((x: number, y: number): HTMLElement | null => {
+    const overlay = overlayRef.current;
+    if (!overlay) return null;
+    overlay.style.display = 'none';
+    const el = document.elementFromPoint(x, y) as HTMLElement | null;
+    overlay.style.display = 'block';
+    return el;
+  }, []);
 
-    const onMove = (e: MouseEvent) => {
-      const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
-      if (!el || el.closest('[data-visual-picker]') || el.closest('[data-edit-toolbar]')) {
-        setHoveredRect(null);
-        return;
-      }
-      setHoveredRect(el.getBoundingClientRect());
-    };
-
-    const onClick = (e: MouseEvent) => {
-      const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
-      if (!el || el.closest('[data-visual-picker]') || el.closest('[data-edit-toolbar]')) return;
-      e.preventDefault();
-      e.stopPropagation();
-      setSelectedEl(el);
-      setSelectedRect(el.getBoundingClientRect());
+  const handleOverlayMove = useCallback((e: React.MouseEvent) => {
+    if (selectedEl) return;
+    const el = getUnderlyingEl(e.clientX, e.clientY);
+    if (!el || el.closest('[data-visual-picker]') || el.closest('[data-edit-toolbar]')) {
       setHoveredRect(null);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    };
-
-    document.addEventListener('mousemove', onMove, true);
-    document.addEventListener('click', onClick, true);
-    return () => {
-      document.removeEventListener('mousemove', onMove, true);
-      document.removeEventListener('click', onClick, true);
-    };
-  }, [isVisualMode, selectedEl]);
-
-  // ── Escape to deselect ──
-  useEffect(() => {
-    if (!isVisualMode) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setSelectedEl(null);
-        setSelectedRect(null);
-        setPrompt('');
-        setHoveredRect(null);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [isVisualMode]);
-
-  // ── Clear state when mode turns off ──
-  useEffect(() => {
-    if (!isVisualMode) {
-      setSelectedEl(null);
-      setSelectedRect(null);
-      setHoveredRect(null);
-      setPrompt('');
+      return;
     }
-  }, [isVisualMode]);
+    setHoveredRect(el.getBoundingClientRect());
+  }, [selectedEl, getUnderlyingEl]);
+
+  const handleOverlayClick = useCallback((e: React.MouseEvent) => {
+    if (selectedEl) return;
+    const el = getUnderlyingEl(e.clientX, e.clientY);
+    if (!el || el.closest('[data-visual-picker]') || el.closest('[data-edit-toolbar]')) return;
+    setSelectedEl(el);
+    setSelectedRect(el.getBoundingClientRect());
+    setHoveredRect(null);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }, [selectedEl, getUnderlyingEl]);
+
+  const handleOverlayLeave = useCallback(() => {
+    setHoveredRect(null);
+  }, []);
 
   // ── Build element context for the selected element ──
   const captureContext = useCallback((el: HTMLElement) => {
-    // Walk up to find data-component
     let component = '';
     let current: HTMLElement | null = el;
     while (current) {
@@ -85,7 +63,6 @@ export function VisualEditPicker() {
       current = current.parentElement;
     }
 
-    // CSS selector path (up to 4 levels)
     const selectorParts: string[] = [];
     let node: HTMLElement | null = el;
     while (node && node !== document.body && selectorParts.length < 5) {
@@ -99,7 +76,6 @@ export function VisualEditPicker() {
       node = node.parentElement;
     }
 
-    // Key computed styles
     const computed = window.getComputedStyle(el);
     const styles: Record<string, string> = {};
     const props = ['color', 'background-color', 'font-size', 'font-weight', 'padding', 'margin',
@@ -131,12 +107,33 @@ export function VisualEditPicker() {
     setPrompt('');
   };
 
+  const cancelSelection = () => {
+    setSelectedEl(null);
+    setSelectedRect(null);
+    setPrompt('');
+  };
+
   if (!isVisualMode) return null;
 
   const pendingEdits = visualEdits.filter(e => e.status === 'pending');
 
   return createPortal(
     <div data-visual-picker="true">
+      {/* ── Full-viewport overlay for picking (z-index below toolbar) ── */}
+      {!selectedEl && (
+        <div
+          ref={overlayRef}
+          onMouseMove={handleOverlayMove}
+          onClick={handleOverlayClick}
+          onMouseLeave={handleOverlayLeave}
+          style={{
+            position: 'fixed', inset: 0,
+            zIndex: 9998, cursor: 'crosshair',
+            background: 'transparent',
+          }}
+        />
+      )}
+
       {/* ── Hover highlight ── */}
       {hoveredRect && !selectedEl && (
         <div style={{
@@ -172,17 +169,20 @@ export function VisualEditPicker() {
             boxShadow: '0 8px 32px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.06)',
             fontFamily: 'system-ui, -apple-system, sans-serif',
           }}
-          onClick={e => e.stopPropagation()}
         >
           <input
             ref={inputRef}
             value={prompt}
             onChange={e => setPrompt(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') handleSubmit(); }}
+            onKeyDown={e => {
+              if (e.key === 'Enter') handleSubmit();
+              if (e.key === 'Escape') cancelSelection();
+            }}
             placeholder="Describe the change…"
             style={{
               flex: 1, padding: '8px 12px', border: '1px solid #e5e7eb',
-              borderRadius: 8, outline: 'none', fontSize: 14, background: '#fafafa', color: '#111827',
+              borderRadius: 8, outline: 'none', fontSize: 14,
+              background: '#fafafa', color: '#111827',
             }}
             onFocus={e => { e.currentTarget.style.borderColor = '#93c5fd'; }}
             onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
@@ -201,7 +201,7 @@ export function VisualEditPicker() {
             Send
           </button>
           <button
-            onClick={() => { setSelectedEl(null); setSelectedRect(null); setPrompt(''); }}
+            onClick={cancelSelection}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
               color: '#9ca3af', fontSize: 16, padding: '2px 6px',
@@ -256,11 +256,6 @@ export function VisualEditPicker() {
         }}>
           {flash}
         </div>
-      )}
-
-      {/* ── Crosshair cursor when picking ── */}
-      {!selectedEl && (
-        <style>{`body, body * { cursor: crosshair !important; } [data-edit-toolbar], [data-edit-toolbar] * { cursor: pointer !important; }`}</style>
       )}
     </div>,
     document.body,
