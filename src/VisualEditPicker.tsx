@@ -32,10 +32,10 @@ export function VisualEditPicker() {
     };
 
     const onClick = (e: MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
       const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
       if (!el || el.closest('[data-visual-picker]') || el.closest('[data-edit-toolbar]')) return;
+      e.preventDefault();
+      e.stopPropagation();
       setSelectedEl(el);
       setSelectedRect(el.getBoundingClientRect());
       setHoveredRect(null);
@@ -182,7 +182,7 @@ export function VisualEditPicker() {
             placeholder="Describe the change…"
             style={{
               flex: 1, padding: '8px 12px', border: '1px solid #e5e7eb',
-              borderRadius: 8, outline: 'none', fontSize: 14, background: '#fafafa',
+              borderRadius: 8, outline: 'none', fontSize: 14, background: '#fafafa', color: '#111827',
             }}
             onFocus={e => { e.currentTarget.style.borderColor = '#93c5fd'; }}
             onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
@@ -260,7 +260,7 @@ export function VisualEditPicker() {
 
       {/* ── Crosshair cursor when picking ── */}
       {!selectedEl && (
-        <style>{`body, body * { cursor: crosshair !important; }`}</style>
+        <style>{`body, body * { cursor: crosshair !important; } [data-edit-toolbar], [data-edit-toolbar] * { cursor: pointer !important; }`}</style>
       )}
     </div>,
     document.body,
