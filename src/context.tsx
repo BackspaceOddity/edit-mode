@@ -60,6 +60,7 @@ interface EditModeContextType {
   visualEdits: VisualEditRequest[];
   addVisualEdit: (edit: { prompt: string; element: VisualEditElement }) => void;
   removeVisualEdit: (id: string) => void;
+  updateVisualEdit: (id: string, prompt: string) => void;
 
   saveAll: () => Promise<boolean>;
 }
@@ -84,13 +85,16 @@ export function EditModeProvider({ children, basePath = '', apiPath = '/api/save
   const isVisualMode = mode === 'visual';
   const apiUrl = `${basePath}${apiPath}`;
 
-  // Load saved data on mount
+  // Load saved data on mount.
+  // Text-edit threads are a long-lived workspace — rehydrate from disk.
+  // Visual edits are fire-and-forget: once sent to Claude via saveAll(),
+  // they're gone from the UI. Reloading the page SHOULD NOT resurrect them;
+  // they live on disk only as a pickup point for Claude. Skip rehydration.
   useEffect(() => {
     fetch(apiUrl)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data?.threads) setThreads(data.threads);
-        if (data?.visualEdits) setVisualEdits(data.visualEdits);
       })
       .catch(() => {});
   }, [apiUrl]);
@@ -189,6 +193,12 @@ export function EditModeProvider({ children, basePath = '', apiPath = '/api/save
     setVisualEdits(prev => prev.filter(e => e.id !== id));
   }, []);
 
+  const updateVisualEdit = useCallback((id: string, prompt: string) => {
+    const trimmed = prompt.trim();
+    if (!trimmed) return;
+    setVisualEdits(prev => prev.map(e => (e.id === id ? { ...e, prompt: trimmed } : e)));
+  }, []);
+
   /* ── Persistence ── */
 
   const saveAll = useCallback(async () => {
@@ -199,7 +209,13 @@ export function EditModeProvider({ children, basePath = '', apiPath = '/api/save
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      return res.ok;
+      if (res.ok) {
+        // Sent successfully → clear the pending queue. Edits live in
+        // _edit-threads.json for Claude; user's in-UI to-do list is done.
+        setVisualEdits([]);
+        return true;
+      }
+      return false;
     } catch {
       await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
       return false;
@@ -215,7 +231,7 @@ export function EditModeProvider({ children, basePath = '', apiPath = '/api/save
       addVariant, swapVariant, swapSource,
       approveThread, reopenThread, removeVariant,
       getActiveText, pendingCount, approvedCount,
-      visualEdits, addVisualEdit, removeVisualEdit,
+      visualEdits, addVisualEdit, removeVisualEdit, updateVisualEdit,
       saveAll,
     }}>
       {children}

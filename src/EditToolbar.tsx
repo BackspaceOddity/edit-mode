@@ -3,99 +3,247 @@
 import { useEffect, useState } from 'react';
 import { useEditMode } from './context';
 
+/**
+ * EditToolbar — bottom-center pill toggle for Text / Visual edit modes.
+ * Visible only when URL has `?edit` query param.
+ *
+ * Styled in BSO aesthetic (cream bg / accent-green / Inter / mono counters).
+ * On save, shows a large top-center toast so the confirmation is hard to miss.
+ */
+
+const C = {
+  bg: '#FAF9F6',
+  bgSecondary: '#F1EFE9',
+  bgTertiary: '#E8E5DD',
+  textPrimary: '#1A1A1A',
+  textSecondary: '#6B6B6B',
+  textMuted: '#9A9A9A',
+  borderDefault: '#E5E3DC',
+  borderStrong: '#CFCCC2',
+  accent: '#4A7C5E',
+  accentSoft: '#E8F0EA',
+  accentHover: '#3D6A4E',
+  accentBorder: '#C4D8C9',
+};
+
+const FONT_SANS =
+  "'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
+const FONT_MONO =
+  "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
+
 export function EditToolbar() {
   const {
-    mode, toggleTextMode, toggleVisualMode,
-    pendingCount, approvedCount, visualEdits, saveAll,
+    mode,
+    toggleTextMode,
+    toggleVisualMode,
+    pendingCount,
+    approvedCount,
+    visualEdits,
+    saveAll,
   } = useEditMode();
 
   const [visible, setVisible] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [savedMsg, setSavedMsg] = useState('');
+  const [toast, setToast] = useState<{ kind: 'saved' | 'copied' | 'error'; n: number } | null>(
+    null,
+  );
 
   useEffect(() => {
-    setVisible(new URLSearchParams(window.location.search).has('edit'));
+    // Visibility logic — localhost defaults to ON (dev convenience), prod
+    // defaults to OFF (don't leak editor UI to end users). Overrides:
+    //   ?edit    — force on (useful for remote debugging on prod)
+    //   ?noedit  — force off (hide even on localhost)
+    const host = window.location.hostname;
+    const isLocal =
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '0.0.0.0' ||
+      host.endsWith('.local');
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('noedit')) setVisible(false);
+    else if (params.has('edit')) setVisible(true);
+    else setVisible(isLocal);
   }, []);
 
   if (!visible) return null;
 
   async function handleSave() {
+    const veCount = visualEdits.filter((e) => e.status === 'pending').length;
+    const total = pendingCount + approvedCount + veCount;
     setSaving(true);
-    setSavedMsg('');
+    setToast(null);
     const ok = await saveAll();
-    setSavedMsg(ok ? '✓ Saved' : '✓ Copied to clipboard');
     setSaving(false);
-    setTimeout(() => setSavedMsg(''), 3000);
+    setToast({ kind: ok ? 'saved' : 'copied', n: total });
+    setTimeout(() => setToast(null), 4000);
   }
 
   const threadTotal = pendingCount + approvedCount;
-  const veCount = visualEdits.filter(e => e.status === 'pending').length;
+  const veCount = visualEdits.filter((e) => e.status === 'pending').length;
   const hasChanges = threadTotal > 0 || veCount > 0;
 
-  const btnBase = {
-    display: 'flex', alignItems: 'center', gap: 6,
-    padding: '5px 12px', borderRadius: 9999, border: 'none',
-    cursor: 'pointer', fontSize: 13, fontWeight: 600,
-    transition: 'background 0.15s',
-  } as const;
+  const btnBase: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '6px 12px',
+    borderRadius: 999,
+    border: '1px solid transparent',
+    cursor: 'pointer',
+    fontSize: 13,
+    fontFamily: FONT_SANS,
+    fontWeight: 500,
+    transition: 'all 0.12s',
+    whiteSpace: 'nowrap',
+  };
+
+  const modeBtn = (active: boolean): React.CSSProperties => ({
+    ...btnBase,
+    background: active ? C.accent : 'transparent',
+    color: active ? '#FFFFFF' : C.textSecondary,
+    borderColor: active ? C.accent : C.borderDefault,
+  });
+
+  const counterStyle: React.CSSProperties = {
+    fontFamily: FONT_MONO,
+    fontSize: 11,
+    color: C.textSecondary,
+    letterSpacing: '0.04em',
+  };
 
   return (
-    <div data-edit-toolbar="true" style={{
-      position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
-      zIndex: 9999, display: 'flex', alignItems: 'center', gap: 8,
-      background: '#111827', color: '#f9fafb', padding: '10px 18px',
-      borderRadius: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-      border: '1px solid #374151', fontSize: 13,
-      fontFamily: 'system-ui, sans-serif', whiteSpace: 'nowrap',
-    }}>
-      {/* Text mode toggle */}
-      <button
-        onClick={toggleTextMode}
+    <>
+      {/* Bottom-center toolbar pill */}
+      <div
+        data-edit-toolbar="true"
         style={{
-          ...btnBase,
-          background: mode === 'text' ? '#3b82f6' : '#374151',
-          color: mode === 'text' ? '#fff' : '#d1d5db',
+          position: 'fixed',
+          bottom: 24,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          background: C.bg,
+          color: C.textPrimary,
+          padding: '8px 14px',
+          borderRadius: 999,
+          boxShadow: '0 8px 28px -6px rgba(26, 26, 26, 0.16), 0 0 0 1px ' + C.borderDefault,
+          fontFamily: FONT_SANS,
+          fontSize: 13,
+          whiteSpace: 'nowrap',
         }}
       >
-        ✏️ Text
-      </button>
-
-      {/* Visual mode toggle */}
-      <button
-        onClick={toggleVisualMode}
-        style={{
-          ...btnBase,
-          background: mode === 'visual' ? '#8b5cf6' : '#374151',
-          color: mode === 'visual' ? '#fff' : '#d1d5db',
-        }}
-      >
-        🎨 Visual
-      </button>
-
-      {/* Separator */}
-      {hasChanges && <div style={{ width: 1, height: 20, background: '#374151' }} />}
-
-      {/* Thread counters */}
-      {pendingCount > 0 && <span style={{ color: '#fbbf24' }}>{pendingCount} open</span>}
-      {approvedCount > 0 && <span style={{ color: '#86efac' }}>{approvedCount} approved</span>}
-      {veCount > 0 && <span style={{ color: '#c4b5fd' }}>{veCount} visual</span>}
-
-      {/* Save */}
-      {hasChanges && (
-        <button
-          onClick={handleSave}
-          disabled={saving}
+        {/* Eyebrow label */}
+        <span
           style={{
-            ...btnBase,
-            background: '#22c55e', color: '#fff',
-            opacity: saving ? 0.6 : 1,
+            fontFamily: FONT_MONO,
+            fontSize: 10,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: C.textMuted,
+            fontWeight: 500,
+            paddingRight: 4,
           }}
         >
-          {saving ? 'Saving…' : 'Save'}
-        </button>
-      )}
+          EDIT
+        </span>
 
-      {savedMsg && <span style={{ color: '#86efac', fontWeight: 500 }}>{savedMsg}</span>}
-    </div>
+        <button onClick={toggleTextMode} style={modeBtn(mode === 'text')}>
+          Text
+        </button>
+
+        <button onClick={toggleVisualMode} style={modeBtn(mode === 'visual')}>
+          Visual
+        </button>
+
+        {hasChanges && (
+          <div style={{ width: 1, height: 20, background: C.borderDefault, margin: '0 2px' }} />
+        )}
+
+        {pendingCount > 0 && <span style={counterStyle}>{pendingCount} open</span>}
+        {approvedCount > 0 && <span style={counterStyle}>{approvedCount} approved</span>}
+        {veCount > 0 && <span style={counterStyle}>{veCount} visual</span>}
+
+        {hasChanges && (
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{
+              ...btnBase,
+              background: C.accent,
+              color: '#FFFFFF',
+              borderColor: C.accent,
+              opacity: saving ? 0.6 : 1,
+            }}
+          >
+            {saving ? 'Saving…' : `Send to Claude`}
+          </button>
+        )}
+      </div>
+
+      {/* Top-center confirmation toast — hard to miss */}
+      {toast && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 10002,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            background: C.bg,
+            color: C.textPrimary,
+            padding: '12px 20px',
+            borderRadius: 12,
+            border: '1px solid ' + (toast.kind === 'error' ? '#E4C9C1' : C.accentBorder),
+            boxShadow: '0 12px 40px -8px rgba(26, 26, 26, 0.16)',
+            fontFamily: FONT_SANS,
+            fontSize: 14,
+            maxWidth: 500,
+            animation: 'bsoToastIn 0.25s ease-out',
+          }}
+        >
+          <div
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: 999,
+              background: C.accent,
+              color: '#FFFFFF',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 14,
+              flexShrink: 0,
+            }}
+          >
+            ✓
+          </div>
+          <div style={{ lineHeight: '20px' }}>
+            <div style={{ fontWeight: 500, color: C.textPrimary }}>
+              {toast.kind === 'saved' && `${toast.n} edit${toast.n === 1 ? '' : 's'} saved for Claude`}
+              {toast.kind === 'copied' && `${toast.n} edit${toast.n === 1 ? '' : 's'} copied to clipboard`}
+              {toast.kind === 'error' && 'Save failed'}
+            </div>
+            <div
+              style={{
+                fontSize: 12,
+                color: C.textSecondary,
+                fontFamily: FONT_MONO,
+                marginTop: 2,
+              }}
+            >
+              {toast.kind === 'saved' && 'written to _edit-threads.json · ask Claude to read it'}
+              {toast.kind === 'copied' && 'paste into Claude prompt'}
+              {toast.kind === 'error' && 'check console'}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
