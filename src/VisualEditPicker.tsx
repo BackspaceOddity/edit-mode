@@ -204,6 +204,9 @@ export function VisualEditPicker() {
   const pendingEdits = visualEdits.filter((e) => e.status === 'pending');
 
   // Shared textarea keydown — Enter submits, Shift+Enter inserts newline.
+  // Esc cancels the local action (selection / inline-edit) and is stopped
+  // from propagating so the global "Esc to exit mode" handler doesn't
+  // fire on top of the local cancel.
   const makeKeyHandler =
     (onSubmit: () => void, onCancel: () => void) =>
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -212,6 +215,7 @@ export function VisualEditPicker() {
         onSubmit();
       } else if (e.key === 'Escape') {
         e.preventDefault();
+        e.stopPropagation();
         onCancel();
       }
       // Shift+Enter → default behavior (insert \n), fall through

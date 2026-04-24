@@ -65,6 +65,31 @@ export function EditToolbar() {
     else setVisible(isLocal);
   }, []);
 
+  // Global Esc handler — exit whichever edit mode is active.
+  // Inner textareas (picker, thread popup) stopPropagation on their Esc
+  // so their local cancel runs first; only unfocused Esc bubbles here.
+  useEffect(() => {
+    if (!visible || mode === 'off') return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      // Skip if focus is in an editable control — let it handle Esc itself.
+      const el = document.activeElement as HTMLElement | null;
+      const tag = el?.tagName;
+      if (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        (el && el.isContentEditable)
+      ) {
+        return;
+      }
+      e.preventDefault();
+      if (mode === 'visual') toggleVisualMode();
+      else if (mode === 'text') toggleTextMode();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [visible, mode, toggleVisualMode, toggleTextMode]);
+
   if (!visible) return null;
 
   async function handleSave() {
