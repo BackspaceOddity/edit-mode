@@ -45,9 +45,34 @@ export function VisualEditPicker() {
   const [flash, setFlash] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
+  // Space-held = temporarily disable overlay so host app (e.g. tldraw)
+  // can handle pan/zoom. Mirrors Figma's "hold Space to pan" pattern.
+  const [spaceHeld, setSpaceHeld] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const editInputRef = useRef<HTMLTextAreaElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+
+  // Listen for Space-hold to enable host-app pan-through
+  useEffect(() => {
+    if (!isVisualMode) return;
+    const onDown = (e: KeyboardEvent) => {
+      if (e.code !== 'Space') return;
+      const el = document.activeElement as HTMLElement | null;
+      const tag = el?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (el && el.isContentEditable)) return;
+      e.preventDefault();
+      setSpaceHeld(true);
+    };
+    const onUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') setSpaceHeld(false);
+    };
+    document.addEventListener('keydown', onDown);
+    document.addEventListener('keyup', onUp);
+    return () => {
+      document.removeEventListener('keydown', onDown);
+      document.removeEventListener('keyup', onUp);
+    };
+  }, [isVisualMode]);
 
   // Autosize helper — grows textarea with content up to maxHeight.
   const autosize = useCallback((el: HTMLTextAreaElement | null, max = 180) => {
@@ -271,7 +296,9 @@ export function VisualEditPicker() {
   return createPortal(
     <div data-visual-picker="true">
       {/* ── Full-viewport overlay ── */}
-      {!selectedEl && (
+      {/* Hidden while Space is held so the host app (tldraw) can handle
+          pan/zoom drag events underneath. Figma-style "hold Space to pan". */}
+      {!selectedEl && !spaceHeld && (
         <div
           ref={overlayRef}
           onMouseMove={handleOverlayMove}
@@ -285,6 +312,31 @@ export function VisualEditPicker() {
             background: 'transparent',
           }}
         />
+      )}
+
+      {/* Hint overlay while Space is held — tells the user pan-through is
+          active. Small chip, top-center, unobtrusive. */}
+      {spaceHeld && !selectedEl && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 80,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 9998,
+            padding: '6px 12px',
+            borderRadius: 999,
+            background: C.accentSoft,
+            color: C.accentHover,
+            border: `1px solid ${C.accentBorder}`,
+            fontFamily: FONT_MONO,
+            fontSize: 11,
+            letterSpacing: '0.08em',
+            pointerEvents: 'none',
+          }}
+        >
+          pan mode · release Space to pick
+        </div>
       )}
 
       {/* ── Hover highlight ── */}
