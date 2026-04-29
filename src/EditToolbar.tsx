@@ -143,7 +143,10 @@ export function EditToolbar() {
         data-edit-toolbar="true"
         style={{
           position: 'fixed',
-          bottom: 24,
+          // Sits above the host-app's own bottom-center chrome (e.g.
+          // tldraw's toolbar in bso-canvas, ~52px tall + gap). 80px puts
+          // our pill cleanly above it without overlap.
+          bottom: 80,
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 9999,

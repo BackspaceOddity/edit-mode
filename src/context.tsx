@@ -213,6 +213,7 @@ export function EditModeProvider({ children, basePath = '', apiPath = '/api/save
         // Sent successfully → clear the pending queue. Edits live in
         // _edit-threads.json for Claude; user's in-UI to-do list is done.
         setVisualEdits([]);
+        setThreads({});
         return true;
       }
       return false;
