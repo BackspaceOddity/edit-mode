@@ -10,7 +10,7 @@ export interface EditThread {
   activeText: string;
   variants: string[];
   archived: string[];
-  status: 'open' | 'approved';
+  status: 'open' | 'approved' | 'applied';
 }
 
 /* ── Visual edit requests ── */
@@ -213,7 +213,18 @@ export function EditModeProvider({ children, basePath = '', apiPath = '/api/save
         // Sent successfully → clear the pending queue. Edits live in
         // _edit-threads.json for Claude; user's in-UI to-do list is done.
         setVisualEdits([]);
-        setThreads({});
+        // Mark approved threads as 'applied' so they're excluded from
+        // pendingCount/approvedCount (counter clears) — but KEEP their
+        // activeText in memory so EditableText keeps showing the chosen
+        // variant on screen. Without this, display reverts to sourceText
+        // after Send to Claude until next page reload.
+        setThreads((prev) => {
+          const updated: Record<string, EditThread> = {};
+          for (const [id, t] of Object.entries(prev)) {
+            updated[id] = t.status === 'approved' ? { ...t, status: 'applied' } : t;
+          }
+          return updated;
+        });
         return true;
       }
       return false;
