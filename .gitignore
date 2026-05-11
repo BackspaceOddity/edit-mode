@@ -1,3 +1,14 @@
 node_modules/
 dist/
 *.tsbuildinfo
+
+# Per-session ephemera written by Second Brain hooks and /wrap skill (local-only by design).
+# `**/` prefix matches at any depth (root + nested sub-projects).
+# Canonical source: SB `_system/git-config/gitignore-project-journal-rules.txt`.
+**/.project-journal/sessions/
+**/.project-journal/watcher-nudges/
+**/.project-journal/.session-*
+**/.project-journal/.last-wrap-*
+**/.project-journal/.last-end-*
+# Workspace-delta cursor IS tracked (read by /resume Step 5.9).
+!**/.project-journal/.last-snapshot.json
