@@ -4,6 +4,18 @@ Reverse-chronological. Each `##` is a session. Added retroactively from git hist
 
 ---
 
+## 2026-06-03 — Notion/Figma annotation model + ToV-lint (work landed in BSO Website)
+
+Session in `edit-mode`; code landed in BSO Website `lib/proposal-workspace/chrome.ts` + `inbox-server.py` (cross-project — journaled here with SHAs, BSO Website journal untouched).
+
+- **Closed BSO-563** — proposal-workspace Edit Mode converged to canonical (Tweaks + Visual/Copy), verified live by screenshot.
+- **feat (`4ea7b97`):** replaced top-right list with per-comment marker+card model; each card has its own Send to Claude / Resolve. New **ToV** tab → posts to inbox `/tov-request`; CC session runs `tov-lint` and writes verdict back; browser polls `/tov-poll` and renders suggestions with apply-on-page. `inbox-server.py` now merges `/inbox` (per-comment send no longer clobbers) + ToV channel.
+- **feat (`886ce76`):** faithful Notion model — amber inline highlight on commented text + comment-bubble markers; removed redundant counter chip (read as a duplicate button).
+- **fix (`b9039cb`):** cssSel `:nth-of-type` counted all children instead of same-tag siblings → markers didn't resolve their anchor (saved but not drawn); + switched markers from `fixed`+viewport-clamp to **document-absolute** so they sit beside their block and scroll with the page (Notion/Figma). Fallback marker if anchor unresolved.
+- **Open:** convergence to `buildScript(config)` canonical package (deferred); live verification of scroll-anchoring + ToV round-trip by Yegor.
+
+---
+
 ## 2026-05-13 — wrap auto-batch (commit be1197d)
 
 Auto-batch /wrap-all.
@@ -37,3 +49,7 @@ Auto-batch /wrap-all.
 - Fix visual edit: input text color, toolbar cursor, click passthrough (commit 2ae1d38)
 - Initial release: edit-mode v0.1.0 (commit 2ae1d38)
 - Initial commit + scaffold (commit 3f4a216)
+
+### 2026-06-02 — orphan session rolled up (PID no longer alive)
+
+- Timeline file `2026-06-02-2017-8315-yegorkorobeynikov.md` had 8 user prompts, 31 tool calls, 0 errors. Full raw log has been deleted (retention policy).
