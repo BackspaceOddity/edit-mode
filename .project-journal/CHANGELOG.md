@@ -4,6 +4,16 @@ Reverse-chronological. Each `##` is a session. Added retroactively from git hist
 
 ---
 
+## 2026-06-03 (pm) — Canonical convergence (BSO-585): single-source buildScript + migrate consumers
+
+Root cause: Yegor opened Stape and saw the OLD Edit Mode — every project had its own fork, nothing shared. Fix: this repo becomes the single source.
+
+- **`buildScript(config)` + `buildScriptInner(config)`** — canonical Edit Mode as a self-contained IIFE, server-safe `./build-script` export (no `'use client'`), `--emc-*` namespaced chrome vars with host-var fallback, configurable Tweaks/tokenMap/theme (`dc20343`, `7221b75`, `565d2d9`).
+- **BSO Website** `chrome.ts` → thin consumer of `buildScript` (`1e5d54e`). Verified live :3131.
+- **Stape** `layout.tsx` → injects `buildScriptInner` dev-only, old pill removed (`82b3f35`). Verified live :3850.
+- Buried fixes found en route: package `'use client'` banner tainted buildScript (→ separate server-safe entry); Next/webpack can't resolve symlinked package outside root with spaces (→ `--install-links` real copy).
+- Remaining: AI Skills Landing migration + delivery README.
+
 ## 2026-06-03 — Notion/Figma annotation model + ToV-lint (work landed in BSO Website)
 
 Session in `edit-mode`; code landed in BSO Website `lib/proposal-workspace/chrome.ts` + `inbox-server.py` (cross-project — journaled here with SHAs, BSO Website journal untouched).

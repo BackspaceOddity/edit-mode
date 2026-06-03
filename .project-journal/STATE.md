@@ -19,15 +19,22 @@ The canonical Edit Mode currently lives, in its most complete form, in **BSO Web
 
 **Closed today:** BSO-563 (converge proposal-workspace Edit Mode — Tweaks + Visual/Copy).
 
-## Decision in flight
+## Convergence (BSO-585) — IN PROGRESS, 3/5 AC verified live
 
-**IIFE-first convergence:** lift `chrome.ts`'s logic into this repo as `buildScript(config)` (configurable CSS-var tokens), so every project sources one implementation. Discussed + recommended, **not yet approved/started** (~3.5h). See `pending-discussions.md`.
+Approved 2026-06-03 (after Yegor opened Stape and saw the OLD Edit Mode — root cause: every project had its own fork, nothing shared). This repo is now the single source.
 
-## Next Steps
+- ✅ **AC#1 — canonical package.** `@backspace-oddity/edit-mode` exports `buildScript(config)` + `buildScriptInner(config)` from a **server-safe** `./build-script` entry (no `'use client'` banner). Panel chrome vars namespaced `--emc-*` with fallback to host vars; Tweaks/tokenMap/theme configurable. Built, smoke-tested.
+- ✅ **AC#2 — BSO Website** migrated: `lib/proposal-workspace/chrome.ts` imports `buildScript`, only supplies BSO tokens + tokenMap. Verified live :3131 = 200, full panel.
+- ✅ **AC#3 — Stape** migrated: `app/layout.tsx` injects `buildScriptInner({slug:'stape'})` (dev-only), old VisualEditPicker pill removed. Verified live :3850 = 200, canonical panel, old pill gone. `EditModeProvider` kept for legacy `EditableText` in HeroV2/WorkThatDisappearsV2.
+- ⬜ **AC#4 — AI Skills Landing** — not yet migrated.
+- ⬜ **AC#5 — delivery docs** — README: rebuild package → clean reinstall in consumer.
 
-1. **User verifies live** (not yet confirmed): scroll-anchored markers stay beside their text; ToV browser→CC→browser round-trip renders verdict in the card.
-2. Convergence to `buildScript(config)` in this repo (the canonical package).
-3. After convergence: migrate AI Skills Landing + KOS to source it.
+**Delivery mechanism (decided):** consumers install as a REAL COPY via `npm install <path> --install-links` (NOT symlink — Next/webpack can't resolve a symlinked package outside project root with spaces in the path). To refresh after a package rebuild: `rm -rf node_modules/@backspace-oddity && npm install <path> --install-links`.
+
+## Follow-ups (separate)
+
+- Retire `EditableText`/`useEditMode` from Stape `components/v2*` so the old `lib/edit-mode/` fork can be deleted entirely (currently coexists behind the provider).
+- Background dev servers launched this session (:3131 BSO Website, :3850 Stape) may not persist — relaunch with each project's dev command + `WS_EDIT_MODE=1` (BSO Website) when needed.
 
 ## Key Files
 
