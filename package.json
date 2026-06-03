@@ -1,7 +1,7 @@
 {
   "name": "@backspace-oddity/edit-mode",
   "version": "0.1.0",
-  "description": "Inline text editing & visual edit picker for Next.js \u2014 Notion-style variants + Lovable-style visual prompts",
+  "description": "Inline text editing & visual edit picker for Next.js — Notion-style variants + Lovable-style visual prompts",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -34,7 +34,8 @@
     "dev": "tsup --watch",
     "prepublishOnly": "npm run build",
     "prepare": "tsup",
-    "test:e2e": "node test/e2e.mjs"
+    "test:e2e": "node test/e2e.mjs",
+    "test:e2e:browser": "node test/e2e-browser.mjs"
   },
   "peerDependencies": {
     "react": ">=18.0.0",
