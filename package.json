@@ -1,7 +1,7 @@
 {
   "name": "@backspace-oddity/edit-mode",
   "version": "0.1.0",
-  "description": "Inline text editing & visual edit picker for Next.js — Notion-style variants + Lovable-style visual prompts",
+  "description": "Inline text editing & visual edit picker for Next.js \u2014 Notion-style variants + Lovable-style visual prompts",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -14,7 +14,12 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./templates/*": "./templates/*"
+    "./templates/*": "./templates/*",
+    "./build-script": {
+      "types": "./dist/build-script.d.ts",
+      "import": "./dist/build-script.js",
+      "require": "./dist/build-script.cjs"
+    }
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
