@@ -5,3 +5,5 @@
 [2026-06-03 11:13] Write → src/buildScript.ts
 [2026-06-03 11:13] Edit → src/index.ts
 [2026-06-03 11:21] Write → tsup.config.ts
+[2026-06-03 11:51] Edit → src/buildScript.ts
+[2026-06-03 11:51] Edit → src/index.ts

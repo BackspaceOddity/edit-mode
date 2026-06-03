@@ -1,4 +1,4 @@
-export { buildScript } from './buildScript';
+export { buildScript, buildScriptInner } from './buildScript';
 export type { EditModeConfig, EditModeSizeToken, EditModeWeightToken, EditModeTokenRule } from './buildScript';
 export { EditModeProvider, useEditMode } from './context';
 export type { EditModeProviderProps, EditThread, VisualEditRequest, VisualEditElement } from './context';

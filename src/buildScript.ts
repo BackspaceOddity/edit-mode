@@ -41,7 +41,8 @@ const DEFAULT_THEME = {
   mono: 'ui-monospace,Menlo,monospace', text: 'system-ui,sans-serif', display: 'system-ui,sans-serif',
 };
 
-export function buildScript(cfg: EditModeConfig): string {
+/** Inner IIFE JS only (no <script> wrapper) — for React dangerouslySetInnerHTML. */
+export function buildScriptInner(cfg: EditModeConfig): string {
   const slug = cfg.slug;
   const inbox = (cfg.inboxBase || 'http://localhost:8002').replace(/\/$/, '');
   const T = { ...DEFAULT_THEME, ...(cfg.theme || {}) };
@@ -219,5 +220,10 @@ ${tweaksBlock}
     .replace(/var\(--text\)/g, 'var(--emc-text)')
     .replace(/var\(--display\)/g, 'var(--emc-display)');
 
-  return `<script>\n(function () {\n  ${themeInject}\n${body}\n}());\n</script>`;
+  return `(function () {\n  ${themeInject}\n${body}\n}());`;
+}
+
+/** Full <script>…</script> string — for server route handlers / static HTML injection. */
+export function buildScript(cfg: EditModeConfig): string {
+  return `<script>\n${buildScriptInner(cfg)}\n</script>`;
 }
