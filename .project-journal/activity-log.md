@@ -7,3 +7,13 @@
 [2026-06-03 11:21] Write → tsup.config.ts
 [2026-06-03 11:51] Edit → src/buildScript.ts
 [2026-06-03 11:51] Edit → src/index.ts
+[2026-06-03 19:26] Write → test/e2e.mjs
+[2026-06-03 19:29] Write → test/e2e-browser.mjs
+[2026-06-03 19:29] Edit → test/e2e-browser.mjs
+[2026-06-03 19:31] Edit → test/e2e-browser.mjs
+[2026-06-03 21:29] Edit → src/buildScript.ts
+[2026-06-03 21:30] Edit → src/buildScript.ts
+[2026-06-03 21:30] Edit → test/e2e-browser.mjs
+[2026-06-03 21:32] Edit → test/e2e-browser.mjs
+[2026-06-03 21:33] Edit → test/e2e-browser.mjs
+[2026-06-03 21:34] Edit → test/e2e-browser.mjs

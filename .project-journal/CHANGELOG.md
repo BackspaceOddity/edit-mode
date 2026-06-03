@@ -4,6 +4,20 @@ Reverse-chronological. Each `##` is a session. Added retroactively from git hist
 
 ---
 
+## 2026-06-04 — E2E harness, UX polish, skill canon fix, delivery root-cause
+
+**Package (edit-mode repo, `a4b428d`→`879faef`→`b6dc8f6`):**
+- **`test:e2e`** — string harness, 23/23: package exports, full panel markup, server/React isolation (build-script no 'use client'), inbox merge semantics, ToV round-trip (request→pending→result→poll→drained), clean github-install proof.
+- **`test:e2e:browser`** — headless chromium, 11/11: Edit button visible+activates, element-pick→Save→pin+highlight in live DOM+localStorage, **card stays open after Save** (new UX), collapses on outside-click, ToV browser→inbox→result→poll→page, zero page errors.
+- **UX change** (`879faef`): after Save, comment card stays open showing "Send to Claude"; collapses only when user clicks empty area outside the panel. Applies to visual/copy/tov.
+- `server/inbox-server.py` bundled into package (ToV channel included).
+
+**Skill canon** (Second Brain `_system/skills/edit-mode-panel/`, `c68310c`→`b95cc2e`):
+- Rewritten: single path = install package + call `buildScript`/`buildScriptInner`. Old `panel.js` removed. Client-specific CONFIG hardcode removed (global skill hygiene).
+- Added: MANDATORY dev-server restart after reinstall — running Next server holds old bundle, reinstall alone is never enough.
+
+**Root cause diagnosed + fixed** (delivery gap, not code bug): Yegor's reinstall in Urembo session updated the node_modules copy but the running :3131 server kept serving the stale bundle → change "didn't apply". Fix: knowledge in skill + explained to Yegor. Live verified on :3131/w/urembo-v2/ after restart.
+
 ## 2026-06-03 (pm) — Canonical convergence (BSO-585): single-source buildScript + migrate consumers
 
 Root cause: Yegor opened Stape and saw the OLD Edit Mode — every project had its own fork, nothing shared. Fix: this repo becomes the single source.
@@ -71,3 +85,23 @@ Auto-batch /wrap-all.
 ### 2026-06-03 — orphan session rolled up (PID no longer alive)
 
 - Timeline file `2026-06-03-1007-11900-yegorkorobeynikov.md` had 1 user prompts, 6 tool calls, 0 errors. Full raw log has been deleted (retention policy).
+
+### 2026-06-03 — orphan session rolled up (PID no longer alive)
+
+- Timeline file `2026-06-03-1033-18796-yegorkorobeynikov.md` had 5 user prompts, 60 tool calls, 0 errors. Full raw log has been deleted (retention policy).
+
+### 2026-06-03 — orphan session rolled up (PID no longer alive)
+
+- Timeline file `2026-06-03-1033-18796-yegorkorobeynikov.md` had 5 user prompts, 60 tool calls, 0 errors. Full raw log has been deleted (retention policy).
+
+### 2026-06-03 — orphan session rolled up (PID no longer alive)
+
+- Timeline file `2026-06-03-1908-29788-yegorkorobeynikov.md` had 5 user prompts, 25 tool calls, 0 errors. Full raw log has been deleted (retention policy).
+
+### 2026-06-03 — orphan session rolled up (PID no longer alive)
+
+- Timeline file `2026-06-03-2120-45048-yegorkorobeynikov.md` had 2 user prompts, 20 tool calls, 0 errors. Full raw log has been deleted (retention policy).
+
+### 2026-06-03 — orphan session rolled up (PID no longer alive)
+
+- Timeline file `2026-06-03-2209-56052-yegorkorobeynikov.md` had 3 user prompts, 10 tool calls, 0 errors. Full raw log has been deleted (retention policy).

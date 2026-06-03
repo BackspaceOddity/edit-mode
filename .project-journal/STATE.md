@@ -19,7 +19,7 @@ The canonical Edit Mode currently lives, in its most complete form, in **BSO Web
 
 **Closed today:** BSO-563 (converge proposal-workspace Edit Mode — Tweaks + Visual/Copy).
 
-## Convergence (BSO-585) — IN PROGRESS, 3/5 AC verified live
+## Convergence (BSO-585) — IN PROGRESS, 3/5 AC + full test coverage + UX polish
 
 Approved 2026-06-03 (after Yegor opened Stape and saw the OLD Edit Mode — root cause: every project had its own fork, nothing shared). This repo is now the single source.
 
@@ -27,9 +27,15 @@ Approved 2026-06-03 (after Yegor opened Stape and saw the OLD Edit Mode — root
 - ✅ **AC#2 — BSO Website** migrated: `lib/proposal-workspace/chrome.ts` imports `buildScript`, only supplies BSO tokens + tokenMap. Verified live :3131 = 200, full panel.
 - ✅ **AC#3 — Stape** migrated: `app/layout.tsx` injects `buildScriptInner({slug:'stape'})` (dev-only), old VisualEditPicker pill removed. Verified live :3850 = 200, canonical panel, old pill gone. `EditModeProvider` kept for legacy `EditableText` in HeroV2/WorkThatDisappearsV2.
 - ⬜ **AC#4 — AI Skills Landing** — not yet migrated.
-- ⬜ **AC#5 — delivery docs** — README: rebuild package → clean reinstall in consumer.
+- ✅ **AC#5 — delivery docs** — skill `edit-mode-panel` rewritten (canonical package path, no panel.js, delivery notes incl. mandatory dev-server restart). README in package TBD.
 
-**Delivery mechanism (decided):** consumers install as a REAL COPY via `npm install <path> --install-links` (NOT symlink — Next/webpack can't resolve a symlinked package outside project root with spaces in the path). To refresh after a package rebuild: `rm -rf node_modules/@backspace-oddity && npm install <path> --install-links`.
+**Delivery mechanism (decided + documented in skill):** `npm install <path> --install-links` (real copy, not symlink). After rebuild: `rm -rf node_modules/@backspace-oddity && npm install <path> --install-links` **+ restart dev server**. Running dev server doesn't pick up node_modules changes — both steps are inseparable.
+
+**End-to-end coverage (added 2026-06-04):**
+- `npm run test:e2e` — 23/23: package exports, full panel markup, server/React isolation, inbox merge, ToV round-trip, clean github-install.
+- `npm run test:e2e:browser` — 11/11: real chromium, Edit button, element-pick→Save→pin+highlight in live DOM, card stays open after Save, collapses on outside-click, ToV browser→inbox→result→poll→page.
+
+**UX improvement (2026-06-04):** card stays open after Save so user can hit "Send to Claude" immediately; collapses only on click outside the panel. In canon, propagated to all consumers via package.
 
 ## Follow-ups (separate)
 
