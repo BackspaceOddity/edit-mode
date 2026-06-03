@@ -87,6 +87,15 @@ async function main() {
     const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('pw-e2eb-edit-threads') || '{}'));
     ok('the visual comment persisted to localStorage', Object.values(stored.threads || {}).some(t => t.type === 'visual' && /smaller/.test(t.prompt)));
 
+    console.log('\n── Browser: card stays open after Save, collapses on outside-click ──');
+    const cs1 = await page.evaluate(() => { const c = document.querySelector('[data-em-card]'); return { open: !!c && c.style.display === 'block' && c.offsetWidth > 0, htmlHasSend: !!c && c.innerHTML.includes('Send to Claude'), textHasSend: !!c && (c.innerText || '').includes('Send to Claude'), htmlLen: c ? c.innerHTML.length : 0 }; });
+    ok('card STAYS OPEN after Save (shows Send to Claude)', cs1.open && cs1.htmlHasSend, JSON.stringify(cs1));
+    await page.mouse.click(30, 30); // empty top-left corner, outside the panel
+    await sleep(300);
+    const cs2 = await page.evaluate(() => { const c = document.querySelector('[data-em-card]'); return !c || c.style.display === 'none'; });
+    ok('clicking empty area outside collapses the card', cs2);
+    ok('marker stays after the card collapses', (await page.locator('[data-em-marker]').count()) >= 2);
+
     console.log('\n── Browser: ToV loop (browser → inbox → result → poll → page) ──');
     await page.click('#p2');
     await page.waitForSelector('#em-mode-t', { timeout: 3000 });
