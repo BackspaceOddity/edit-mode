@@ -21,6 +21,8 @@
 export interface EditModeSizeToken { k: string; l: string; d: number; min: number; max: number; }
 export interface EditModeWeightToken { l: string; w: string; s: string; wd: number; sd: string; }
 export interface EditModeTokenRule { match: string; token: string; label?: string; }
+/** Font-family picker row. `k` = CSS var (e.g. '--font-body'), `l` = label, `d` = default value. */
+export interface EditModeFontToken { k: string; l: string; d?: string; }
 
 export interface EditModeConfig {
   /** localStorage namespace + payload `source`. Usually the client/page slug. */
@@ -28,7 +30,14 @@ export interface EditModeConfig {
   /** Inbox server base URL. Default 'http://localhost:8002'. */
   inboxBase?: string;
   /** Tweaks panel targets (host typography CSS vars). Omit → no Tweaks panel. */
-  tweaks?: { sizes?: EditModeSizeToken[]; lineHeights?: EditModeSizeToken[]; weightStyles?: EditModeWeightToken[]; };
+  tweaks?: {
+    sizes?: EditModeSizeToken[];
+    lineHeights?: EditModeSizeToken[];
+    weightStyles?: EditModeWeightToken[];
+    /** Font-family pickers — each row controls one CSS var via all system fonts
+     *  (loaded via window.queryLocalFonts(); falls back to text input if unavailable). */
+    fontFamilies?: EditModeFontToken[];
+  };
   /** Declarative block→token map driving the Tweaks-row hover highlight + dialog label. */
   tokenMap?: EditModeTokenRule[];
   /** Panel chrome theme defaults (used when the host doesn't define the matching var). */
@@ -49,8 +58,9 @@ export function buildScriptInner(cfg: EditModeConfig): string {
   const sizes = cfg.tweaks?.sizes ?? [];
   const lineHeights = cfg.tweaks?.lineHeights ?? [];
   const weightStyles = cfg.tweaks?.weightStyles ?? [];
+  const fontFamilies = cfg.tweaks?.fontFamilies ?? [];
   const tokenMap = cfg.tokenMap ?? [];
-  const hasTweaks = sizes.length > 0 || lineHeights.length > 0 || weightStyles.length > 0;
+  const hasTweaks = sizes.length > 0 || lineHeights.length > 0 || weightStyles.length > 0 || fontFamilies.length > 0;
 
   const twLabelMap: Record<string, string> = {};
   tokenMap.forEach(r => { twLabelMap[r.token] = r.label || r.token; });
@@ -73,6 +83,20 @@ export function buildScriptInner(cfg: EditModeConfig): string {
   SIZES.forEach(function(s){ if(twSaved[s.k]!==undefined) document.documentElement.style.setProperty(s.k,twSaved[s.k]+'px'); });
   LHS.forEach(function(h){ if(twSaved[h.k]!==undefined) document.documentElement.style.setProperty(h.k,(twSaved[h.k]/100).toFixed(2)); });
   var WSTYLE=${JSON.stringify(weightStyles)};
+  var FONTFAMS=${JSON.stringify(fontFamilies)};
+  FONTFAMS.forEach(function(f){ if(twSaved[f.k]) document.documentElement.style.setProperty(f.k,twSaved[f.k]); });
+  /* Load all system fonts via Local Font Access API and populate datalists */
+  (function loadFonts(){
+    if(!window.queryLocalFonts) return;
+    window.queryLocalFonts().then(function(fonts){
+      var seen={}, families=[];
+      fonts.forEach(function(f){ if(!seen[f.family]){ seen[f.family]=1; families.push(f.family); } });
+      families.sort();
+      document.querySelectorAll('.em-font-dl').forEach(function(dl){
+        families.forEach(function(fam){ var opt=document.createElement('option'); opt.value=fam; dl.appendChild(opt); });
+      });
+    }).catch(function(){});
+  })();
   WSTYLE.forEach(function(o){ if(twSaved[o.w]!==undefined) document.documentElement.style.setProperty(o.w,twSaved[o.w]); if(twSaved[o.s]!==undefined) document.documentElement.style.setProperty(o.s,twSaved[o.s]); });
   var WOPTS=[['400|normal','Regular'],['500|normal','Medium'],['700|normal','Bold'],['400|italic','Italic']];
   function wsRow(o){ var cw=twSaved[o.w]!==undefined?twSaved[o.w]:o.wd; var cs=twSaved[o.s]!==undefined?twSaved[o.s]:o.sd; var cur=cw+'|'+cs; var sel=WOPTS.map(function(p){return '<option value="'+p[0]+'"'+(p[0]===cur?' selected':'')+'>'+p[1]+'</option>';}).join(''); return '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:0 -6px;border-bottom:1px solid var(--rule);"><span style="font-family:var(--mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-40);min-width:80px;">'+o.l+'</span><select class="ws-sel" data-w="'+o.w+'" data-s="'+o.s+'" style="font-family:var(--mono);font-size:10px;border:1px solid var(--rule-strong);border-radius:4px;padding:4px 6px;background:var(--surface);color:var(--ink);cursor:pointer;">'+sel+'</select></div>'; }
@@ -84,14 +108,16 @@ export function buildScriptInner(cfg: EditModeConfig): string {
   function updateStagedInd(){ var el=document.getElementById('tw-staged-ind'); if(!el)return; var n=twStagedCount(); el.textContent=n?('staged: '+n+' value'+(n===1?'':'s')+' — ready for Claude'):'change sliders, then Save to stage'; el.style.color=n?'var(--ink)':'var(--ink-40)'; }
   function twRow(o,isLh){ var cur=twSaved[o.k]!==undefined?twSaved[o.k]:o.d; var sid='tw'+o.k.replace(/[^a-z0-9]/gi,'_'); return '<div id="'+twRowId(o.k)+'" style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:0 -6px;border-radius:4px;border-bottom:1px solid var(--rule);transition:background .15s,box-shadow .15s;"><span style="font-family:var(--mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-40);min-width:92px;">'+o.l+'</span><div style="display:flex;align-items:center;gap:5px;"><input type="range" data-lh="'+(isLh?1:0)+'" data-key="'+o.k+'" min="'+o.min+'" max="'+o.max+'" value="'+cur+'" style="width:66px;cursor:pointer;accent-color:var(--ink);"><span id="'+sid+'" style="font-family:var(--mono);font-size:9px;color:var(--ink-55);min-width:30px;text-align:right;">'+(isLh?(cur/100).toFixed(2):cur+'px')+'</span></div></div>'; }
   function twLabel(t){ return '<p style="font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);margin:14px 0 6px;padding-bottom:4px;border-bottom:1.5px solid var(--ink);">'+t+'</p>'; }
+  function ffRow(o){ var cur=twSaved[o.k]||o.d||''; var dlId='em-dl-'+o.k.replace(/[^a-z0-9]/gi,'_'); return '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:0 -6px;border-bottom:1px solid var(--rule);gap:8px;"><span style="font-family:var(--mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-40);flex-shrink:0;min-width:72px;">'+o.l+'</span><input class="em-ff-inp" data-key="'+o.k+'" list="'+dlId+'" value="'+cur+'" placeholder="Type or pick…" style="flex:1;min-width:0;font-family:var(--text);font-size:11px;border:1px solid var(--rule-strong);border-radius:4px;padding:4px 6px;background:var(--surface);color:var(--ink);outline:none;"><datalist id="'+dlId+'" class="em-font-dl"></datalist></div>'; }
   var twPanel=mk('div'); twPanel.className='em-ui'; twPanel.style.cssText='position:fixed;bottom:74px;right:24px;z-index:9998;display:none;background:var(--paper);border:1.5px solid var(--rule-strong);border-radius:10px;padding:14px 16px;width:250px;max-height:80vh;overflow-y:auto;box-shadow:0 4px 24px rgba(0,0,0,.16);';
-  twPanel.innerHTML=(SIZES.length?twLabel('Font sizes')+SIZES.map(function(s){return twRow(s,false);}).join(''):'')+(LHS.length?twLabel('Line heights')+LHS.map(function(h){return twRow(h,true);}).join(''):'')+(WSTYLE.length?twLabel('Weight & style')+WSTYLE.map(wsRow).join(''):'')+'<p id="tw-staged-ind" style="font-family:var(--mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-40);margin:14px 0 6px;"></p><div style="display:flex;gap:6px;"><button id="tw-stage" style="flex:1;background:var(--surface);color:var(--ink);border:1.5px solid var(--ink);border-radius:6px;padding:7px 0;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">Save</button><button id="tw-reset" style="flex:1;background:transparent;border:1px solid var(--rule-strong);border-radius:6px;padding:7px 0;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-55);cursor:pointer;">Reset</button></div><button id="tw-save" style="display:block;width:100%;margin-top:6px;background:var(--ink);color:var(--paper);border:none;border-radius:6px;padding:8px 0;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">&#8594; Save to Claude</button>';
+  twPanel.innerHTML=(SIZES.length?twLabel('Font sizes')+SIZES.map(function(s){return twRow(s,false);}).join(''):'')+(LHS.length?twLabel('Line heights')+LHS.map(function(h){return twRow(h,true);}).join(''):'')+(WSTYLE.length?twLabel('Weight & style')+WSTYLE.map(wsRow).join(''):'')+(FONTFAMS.length?twLabel('Font families')+FONTFAMS.map(ffRow).join(''):'')+'<p id="tw-staged-ind" style="font-family:var(--mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-40);margin:14px 0 6px;"></p><div style="display:flex;gap:6px;"><button id="tw-stage" style="flex:1;background:var(--surface);color:var(--ink);border:1.5px solid var(--ink);border-radius:6px;padding:7px 0;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">Save</button><button id="tw-reset" style="flex:1;background:transparent;border:1px solid var(--rule-strong);border-radius:6px;padding:7px 0;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-55);cursor:pointer;">Reset</button></div><button id="tw-save" style="display:block;width:100%;margin-top:6px;background:var(--ink);color:var(--paper);border:none;border-radius:6px;padding:8px 0;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">&#8594; Save to Claude</button>';
   document.body.appendChild(twPanel);
   twPanel.querySelectorAll('input[type="range"]').forEach(function(inp){ inp.addEventListener('input',function(){ var sid='tw'+inp.dataset.key.replace(/[^a-z0-9]/gi,'_'),sp=document.getElementById(sid); if(inp.dataset.lh==='1'){ if(sp)sp.textContent=(inp.value/100).toFixed(2); twApplyLh(inp.dataset.key,inp.value); } else { if(sp)sp.textContent=inp.value+'px'; twApplyPx(inp.dataset.key,inp.value); } }); });
   twPanel.querySelectorAll('.ws-sel').forEach(function(sel){ sel.addEventListener('change',function(ev){ ev.stopPropagation(); var p=sel.value.split('|'),w=p[0],st=p[1]; document.documentElement.style.setProperty(sel.dataset.w,w); document.documentElement.style.setProperty(sel.dataset.s,st); var d=twLoad(); d[sel.dataset.w]=Number(w); d[sel.dataset.s]=st; localStorage.setItem(TW_STORE,JSON.stringify(d)); }); });
+  twPanel.querySelectorAll('.em-ff-inp').forEach(function(inp){ inp.addEventListener('input',function(ev){ ev.stopPropagation(); var val=inp.value.trim(); if(!val)return; document.documentElement.style.setProperty(inp.dataset.key,val); var d=twLoad(); d[inp.dataset.key]=val; localStorage.setItem(TW_STORE,JSON.stringify(d)); }); });
   updateStagedInd();
   document.getElementById('tw-stage').addEventListener('click',function(ev){ ev.stopPropagation(); twStageNow(); updateStagedInd(); var b=document.getElementById('tw-stage'),o=b.textContent; b.textContent='✓ Saved'; b.style.background='var(--ink)'; b.style.color='var(--paper)'; setTimeout(function(){b.textContent=o;b.style.background='var(--surface)';b.style.color='var(--ink)';},1200); });
-  document.getElementById('tw-reset').addEventListener('click',function(ev){ ev.stopPropagation(); localStorage.removeItem(TW_STORE); localStorage.removeItem(TW_STAGED); SIZES.forEach(function(s){ document.documentElement.style.setProperty(s.k,s.d+'px'); }); LHS.forEach(function(h){ document.documentElement.style.setProperty(h.k,(h.d/100).toFixed(2)); }); WSTYLE.forEach(function(o){ document.documentElement.style.setProperty(o.w,o.wd); document.documentElement.style.setProperty(o.s,o.sd); }); twPanel.remove(); twBtn.remove(); });
+  document.getElementById('tw-reset').addEventListener('click',function(ev){ ev.stopPropagation(); localStorage.removeItem(TW_STORE); localStorage.removeItem(TW_STAGED); SIZES.forEach(function(s){ document.documentElement.style.setProperty(s.k,s.d+'px'); }); LHS.forEach(function(h){ document.documentElement.style.setProperty(h.k,(h.d/100).toFixed(2)); }); WSTYLE.forEach(function(o){ document.documentElement.style.setProperty(o.w,o.wd); document.documentElement.style.setProperty(o.s,o.sd); }); FONTFAMS.forEach(function(f){ if(f.d) document.documentElement.style.setProperty(f.k,f.d); }); twPanel.remove(); twBtn.remove(); });
   document.getElementById('tw-save').addEventListener('click',function(ev){ ev.stopPropagation(); var b=document.getElementById('tw-save'); var vals=twStagedCount()?twStaged():twLoad(); if(!Object.keys(vals).length){ b.textContent='— nothing to send'; setTimeout(function(){b.innerHTML='&#8594; Save to Claude';},1400); return; } fetch(INBOX,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'font-tweaks',source:'${slug}',values:vals,savedAt:new Date().toISOString()})}).then(function(){ localStorage.removeItem(TW_STAGED); updateStagedInd(); b.textContent='✓ Sent batch!'; setTimeout(function(){b.innerHTML='&#8594; Save to Claude';},2000); }).catch(function(){ b.textContent='✗ Server off'; setTimeout(function(){b.innerHTML='&#8594; Save to Claude';},2500); }); });
   var twBtn=mk('button'); twBtn.className='em-ui'; twBtn.textContent='Aa'; twBtn.title='Tweaks — font size & line height'; twBtn.style.cssText='position:fixed;bottom:24px;right:70px;z-index:9999;width:40px;height:40px;border-radius:50%;border:1.5px solid var(--rule-strong);background:var(--paper);color:var(--ink);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.10);font-family:var(--display);line-height:1;';
   twBtn.addEventListener('click',function(){ twPanel.style.display=twPanel.style.display==='none'?'block':'none'; });

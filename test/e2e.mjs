@@ -79,6 +79,17 @@ async function main() {
   // no-tweaks variant hides the Tweaks panel
   ok('no-tweaks variant omits Tweaks panel', !buildScript({ slug: 'x' }).includes('Font sizes'));
 
+  const withFonts = buildScript({
+    slug: 'ff-test',
+    tweaks: { fontFamilies: [{ k: '--font-body', l: 'Body font', d: 'Inter' }, { k: '--font-heading', l: 'Heading', d: 'GT Eesti Pro' }] },
+  });
+  ok('Font families section rendered', withFonts.includes('Font families'));
+  ok('font input rendered with data-key (em-ff-inp class present)', withFonts.includes('em-ff-inp'));
+  ok('datalist rendered (em-font-dl class)', withFonts.includes('em-font-dl'));
+  ok('queryLocalFonts call present', withFonts.includes('queryLocalFonts'));
+  ok('FONTFAMS config injected', withFonts.includes('"--font-body"') && withFonts.includes('"Body font"'));
+  ok('FONTFAMS restore on load', withFonts.includes('FONTFAMS.forEach') && withFonts.includes('twSaved[f.k]'));
+
   section('5. Inbox server round-trip (merge + ToV loop)');
   const PORT = 8042;
   const BASE = `http://localhost:${PORT}`;
