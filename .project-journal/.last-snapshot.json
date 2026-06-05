@@ -1,6 +1,6 @@
 {
-  "last_session_at": "2026-06-03T11:00:50",
-  "global_claude_md_hash": "eb15f3dbf889778ac13a1af8a21b77992546a99193bdb782f2dd67dd65807fbb",
+  "last_session_at": "2026-06-03T23:20:15",
+  "global_claude_md_hash": "9fcb7d1516c72ea49515fef709e5abc33599a9ac1382a6094a99ecdb4b9a5232",
   "global_claude_md_sections": [
     "Architectural fixes over patches — MANDATORY",
     "Architectural-claim provenance — MANDATORY",
@@ -39,6 +39,7 @@
     "Subagent / Task Tool Rule",
     "Subagent delegation — WHEN to use — MANDATORY",
     "UI / Visual Hierarchy Rule",
+    "URLs in chat — bare clickable, never in backticks — MANDATORY",
     "User Profile",
     "Visual Edits Protocol — MANDATORY",
     "Vocabulary",
