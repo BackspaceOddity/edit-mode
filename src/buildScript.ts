@@ -150,8 +150,30 @@ export function buildScriptInner(cfg: EditModeConfig): string {
 
   var dlg=mk('div'); dlg.className='em-ui'; dlg.style.cssText='position:fixed;z-index:10002;display:none;background:var(--paper);border:1.5px solid var(--rule-strong);border-radius:12px;padding:14px;width:320px;box-shadow:0 16px 48px rgba(0,0,0,.20);font-family:var(--text);';
   var MB='flex:1;border:none;border-radius:4px;padding:3px 0;font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;';
-  dlg.innerHTML='<div style="display:flex;gap:4px;margin-bottom:10px;background:var(--paper-soft);border-radius:6px;padding:3px;"><button id="em-mode-v" style="'+MB+'background:var(--ink);color:var(--paper);">Visual</button><button id="em-mode-c" style="'+MB+'background:transparent;color:var(--ink-40);">Copy</button><button id="em-mode-t" style="'+MB+'background:transparent;color:var(--ink-40);">ToV</button></div><p id="em-lbl" style="font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-40);margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></p><div id="em-body"></div>';
+  dlg.innerHTML='<div id="em-dlg-handle" style="display:flex;justify-content:center;align-items:center;height:14px;margin:-4px -4px 8px;border-radius:8px 8px 0 0;cursor:grab;opacity:.35;user-select:none;" title="Drag to move"><svg width="20" height="6" viewBox="0 0 20 6"><circle cx="4" cy="3" r="1.5" fill="currentColor"/><circle cx="10" cy="3" r="1.5" fill="currentColor"/><circle cx="16" cy="3" r="1.5" fill="currentColor"/></svg></div><div style="display:flex;gap:4px;margin-bottom:10px;background:var(--paper-soft);border-radius:6px;padding:3px;"><button id="em-mode-v" style="'+MB+'background:var(--ink);color:var(--paper);">Visual</button><button id="em-mode-c" style="'+MB+'background:transparent;color:var(--ink-40);">Copy</button><button id="em-mode-t" style="'+MB+'background:transparent;color:var(--ink-40);">ToV</button></div><p id="em-lbl" style="font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-40);margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></p><div id="em-body"></div>';
   document.body.appendChild(dlg);
+  /* ── dialog drag ── */
+  (function(){
+    var dragging=false, ox=0, oy=0;
+    dlg.addEventListener('mousedown',function(e){
+      var h=document.getElementById('em-dlg-handle');
+      if(!h||!h.contains(e.target))return;
+      e.preventDefault(); e.stopPropagation();
+      dragging=true; document.body.style.userSelect='none';
+      var r=dlg.getBoundingClientRect(); ox=e.clientX-r.left; oy=e.clientY-r.top;
+      h.style.cursor='grabbing';
+    });
+    document.addEventListener('mousemove',function(e){
+      if(!dragging)return;
+      var x=Math.max(0,Math.min(window.innerWidth-dlg.offsetWidth,e.clientX-ox));
+      var y=Math.max(0,Math.min(window.innerHeight-dlg.offsetHeight,e.clientY-oy));
+      dlg.style.left=x+'px'; dlg.style.top=y+'px';
+    });
+    document.addEventListener('mouseup',function(){
+      if(!dragging)return; dragging=false; document.body.style.userSelect='';
+      var h=document.getElementById('em-dlg-handle'); if(h) h.style.cursor='grab';
+    });
+  })();
 
   var card=mk('div'); card.className='em-ui'; card.setAttribute('data-em-card','1'); card.style.cssText='position:fixed;z-index:10003;display:none;width:308px;max-height:72vh;overflow-y:auto;background:var(--paper);border:1.5px solid var(--rule-strong);border-radius:12px;padding:14px;box-shadow:0 16px 48px rgba(0,0,0,.22);font-family:var(--text);';
   document.body.appendChild(card);
