@@ -34,6 +34,10 @@ export interface EditModeConfig {
     sizes?: EditModeSizeToken[];
     lineHeights?: EditModeSizeToken[];
     weightStyles?: EditModeWeightToken[];
+    /** Override the default weight/style options shown in every Weight & Style dropdown.
+     *  Format: [cssWeight|cssStyle, label]. Default: Regular/Medium/Bold/Italic.
+     *  Use this to expose all loaded variants of the project's brand font. */
+    weightOptions?: Array<[string, string]>;
     /** Font-family pickers — each row controls one CSS var via all system fonts
      *  (loaded via window.queryLocalFonts(); falls back to text input if unavailable). */
     fontFamilies?: EditModeFontToken[];
@@ -59,6 +63,7 @@ export function buildScriptInner(cfg: EditModeConfig): string {
   const lineHeights = cfg.tweaks?.lineHeights ?? [];
   const weightStyles = cfg.tweaks?.weightStyles ?? [];
   const fontFamilies = cfg.tweaks?.fontFamilies ?? [];
+  const weightOptions = cfg.tweaks?.weightOptions ?? null; // null = use default 4 in IIFE
   const tokenMap = cfg.tokenMap ?? [];
   const hasTweaks = sizes.length > 0 || lineHeights.length > 0 || weightStyles.length > 0 || fontFamilies.length > 0;
 
@@ -98,7 +103,7 @@ export function buildScriptInner(cfg: EditModeConfig): string {
     }).catch(function(){});
   })();
   WSTYLE.forEach(function(o){ if(twSaved[o.w]!==undefined) document.documentElement.style.setProperty(o.w,twSaved[o.w]); if(twSaved[o.s]!==undefined) document.documentElement.style.setProperty(o.s,twSaved[o.s]); });
-  var WOPTS=[['400|normal','Regular'],['500|normal','Medium'],['700|normal','Bold'],['400|italic','Italic']];
+  var WOPTS=${weightOptions ? JSON.stringify(weightOptions) : "[['400|normal','Regular'],['500|normal','Medium'],['700|normal','Bold'],['400|italic','Italic']]"};
   function wsRow(o){ var cw=twSaved[o.w]!==undefined?twSaved[o.w]:o.wd; var cs=twSaved[o.s]!==undefined?twSaved[o.s]:o.sd; var cur=cw+'|'+cs; var sel=WOPTS.map(function(p){return '<option value="'+p[0]+'"'+(p[0]===cur?' selected':'')+'>'+p[1]+'</option>';}).join(''); return '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:0 -6px;border-bottom:1px solid var(--rule);"><span style="font-family:var(--mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-40);min-width:80px;">'+o.l+'</span><select class="ws-sel" data-w="'+o.w+'" data-s="'+o.s+'" style="font-family:var(--mono);font-size:10px;border:1px solid var(--rule-strong);border-radius:4px;padding:4px 6px;background:var(--surface);color:var(--ink);cursor:pointer;">'+sel+'</select></div>'; }
   function twApplyPx(k,v){ document.documentElement.style.setProperty(k,v+'px'); var s=twLoad(); s[k]=Number(v); localStorage.setItem(TW_STORE,JSON.stringify(s)); }
   function twApplyLh(k,v){ document.documentElement.style.setProperty(k,(v/100).toFixed(2)); var s=twLoad(); s[k]=Number(v); localStorage.setItem(TW_STORE,JSON.stringify(s)); }
