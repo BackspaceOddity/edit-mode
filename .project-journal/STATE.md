@@ -1,8 +1,23 @@
 # edit-mode — Current State
 
-**Last updated:** 2026-06-03
+**Last updated:** 2026-06-05
 **Status:** Active development — canonical Edit Mode being shaped via the live BSO Website surface
 **Client/Context:** Internal — Backspace Oddity (web tooling)
+
+## Latest session (2026-06-05) — font system, dialog UX, source-text edit, Monitor root-cause
+
+Landed in package (all pushed to `main`, latest `a7e4c3f`):
+- **Font family picker** (`29f1a2a`) — `queryLocalFonts()` loads all Font Book fonts into datalists; `tweaks.fontFamilies[]` config; each row drives a CSS var; falls back to text input if API blocked.
+- **Configurable `weightOptions`** (`b0d83dd`) — override the default Regular/Medium/Bold/Italic with any font's full weight range (used for all 16 GT Eesti Pro variants); passes through to WOPTS in the IIFE via `JSON.stringify`.
+- **Stacked font-family rows** (`9f5405d`) — label above, full-width input below, so long font names aren't truncated.
+- **Draggable dialog** (`83b78a8`) — 3-dot handle, grab+drag anywhere, clamped to viewport.
+- **Editable source text in Copy mode** (`a7e4c3f`) — SOURCE row is a `<textarea>`, blur saves to `sourceText` + updates live element.
+
+Consumer-side (BSO Website, branch `yegor/bso-557-...`, latest `70695cd`):
+- `chrome.ts` supplies `GT_EESTI_WEIGHTS` (16 variants) + `BSO_FONT_FAMILIES` + `.step-title`/`.step-desc` added to `BSO_TOKEN_MAP` (step headings now appear in Tweaks).
+- `styles.ts` + `public/fonts/` — 20 new GT Eesti TTFs + 23 `@font-face` declarations so the weight dropdown maps to actually-loaded faces (showing an unloaded weight silently falls back).
+
+**Monitor inbox root-cause (cross-project, fixed in SKILL.md):** Urembo session's Monitor watched `_edit-threads.json` while `inbox-server.py` writes `_edit-inbox.json` → 24 comments never surfaced. SKILL.md now ships one canonical Monitor command watching `_edit-inbox.json` + `_tov-requests.json`.
 
 ## What This Project Is
 

@@ -4,6 +4,19 @@ Reverse-chronological. Each `##` is a session. Added retroactively from git hist
 
 ---
 
+## 2026-06-05 — font system, dialog UX, editable source, Monitor inbox root-cause
+
+**Package (`29f1a2a`→`a7e4c3f`, all on `main`):**
+- **Font family picker** (`29f1a2a`) — `queryLocalFonts()` populates datalists with all Font Book fonts; `tweaks.fontFamilies[]` config; per-row CSS-var control; text-input fallback when the API is blocked.
+- **Configurable `weightOptions`** (`b0d83dd`) — data-driven override of the weight/style dropdown (Regular/Medium/Bold/Italic → any font's full range) via `JSON.stringify` into WOPTS.
+- **Stacked font-family rows** (`9f5405d`) — label above, full-width input below; long font names no longer truncated.
+- **Draggable comment dialog** (`83b78a8`) — 3-dot handle, drag anywhere, viewport-clamped.
+- **Editable source text in Copy mode** (`a7e4c3f`) — SOURCE row is a `<textarea>`; blur saves to `sourceText` + updates the live element.
+
+**Consumer (BSO Website, branch `yegor/bso-557-...`, `70695cd`):** `GT_EESTI_WEIGHTS` (16 variants) + `BSO_FONT_FAMILIES` in `chrome.ts`; `.step-title`/`.step-desc` added to `BSO_TOKEN_MAP`; 20 GT Eesti TTFs + 23 `@font-face` in `styles.ts`/`public/fonts/` so the dropdown maps to loaded faces.
+
+**Skill canon (cross-project fix):** Monitor was watching the OLD `_edit-threads.json` while `inbox-server.py` writes `_edit-inbox.json` → 24 Urembo comments silently lost. SKILL.md now ships one canonical Monitor command watching `_edit-inbox.json` + `_tov-requests.json` with an explicit warning about the old file.
+
 ## 2026-06-04 — E2E harness, UX polish, skill canon fix, delivery root-cause
 
 **Package (edit-mode repo, `a4b428d`→`879faef`→`b6dc8f6`):**
