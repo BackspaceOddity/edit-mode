@@ -10,4 +10,4 @@ Inbound cross-project lessons. Each entry comes from a sibling project's `knowle
 
 ## Entries
 
-_Empty until first cross-reference lands._
+[2026-06-09] from edit-mode: [[internal-tool-to-saas-leap]] — productizing an internal tool into hosted SaaS is a different (often venture-scale) product; the tool is ~20%, the value-delivery runtime is the unbuilt 80%; validate the riskiest value-loop with one design partner before building any SaaS scaffold.
