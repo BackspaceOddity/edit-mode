@@ -3,6 +3,17 @@
 Inbox server for proposal-workspace Edit Mode.
 
 Endpoints (all CORS-open, for localhost dev only):
+  GET  /edit-mode.js — serves the ALWAYS-CANONICAL Edit Mode panel, built live
+                       from the installed @backspace-oddity/edit-mode package by
+                       calling buildScriptInner(config). A static prototype
+                       (hand-authored index.html served by `python -m http.server`)
+                       references it with one tag:
+                         <script src="http://localhost:8002/edit-mode.js?slug=x"></script>
+                       Config comes from edit-mode.config.json beside the server
+                       (tweaks / tokenMap / theme); ?slug= overrides the slug.
+                       This replaces the old "inline a frozen snapshot into the
+                       HTML" path — update the package + restart this server and
+                       every static prototype refreshes. No inlining, no drift.
   POST /inbox        — edit threads / tweaks. MERGES into _edit-inbox.json
                        (per-comment "Send to Claude" sends one thread at a
                        time, so overwrite would clobber earlier sends).
@@ -15,7 +26,7 @@ Endpoints (all CORS-open, for localhost dev only):
 
 Run: python3 inbox-server.py 8002
 """
-import json, os, sys, uuid
+import json, os, sys, uuid, subprocess
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
@@ -23,6 +34,55 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 INBOX = os.path.join(HERE, '_edit-inbox.json')
 TOV_REQ = os.path.join(HERE, '_tov-requests.json')
 TOV_RES = os.path.join(HERE, '_tov-results.json')
+CONFIG = os.path.join(HERE, 'edit-mode.config.json')
+
+# Node ESM that imports the installed package and prints the inner panel JS.
+# Config arrives on stdin; the build-script path is argv[1].
+_RENDER_SRC = (
+    "import{readFileSync}from'node:fs';"
+    "import{pathToFileURL}from'node:url';"
+    "const cfg=JSON.parse(readFileSync(0,'utf8')||'{}');"
+    "const m=await import(pathToFileURL(process.argv[1]).href);"
+    "process.stdout.write(m.buildScriptInner(cfg));"
+)
+
+
+def _find_build_script():
+    """Locate the installed package's server-safe build-script entry."""
+    candidates = [
+        os.path.join(HERE, 'node_modules/@backspace-oddity/edit-mode/dist/build-script.js'),
+        # server running from inside the package (Tools/edit-mode/server/)
+        os.path.join(HERE, '..', 'dist', 'build-script.js'),
+    ]
+    for c in candidates:
+        if os.path.isfile(c):
+            return os.path.abspath(c)
+    return None
+
+
+def _render_panel(slug):
+    """Build the canonical inner JS for this project. Returns (ok, js_or_error)."""
+    bs = _find_build_script()
+    if not bs:
+        return False, ('console.error("[edit-mode] package not found — run '
+                       '`npm install github:BackspaceOddity/edit-mode` in this project");')
+    cfg = _read(CONFIG, {})
+    if slug:
+        cfg['slug'] = slug
+    cfg.setdefault('slug', 'prototype')
+    cfg.setdefault('inboxBase', f'http://localhost:{PORT}')
+    try:
+        r = subprocess.run(
+            ['node', '--input-type=module', '-e', _RENDER_SRC, bs],
+            input=json.dumps(cfg).encode(), cwd=HERE,
+            capture_output=True, timeout=25,
+        )
+    except Exception as e:
+        return False, f'console.error("[edit-mode] node render failed: {e}");'
+    if r.returncode != 0:
+        err = r.stderr.decode(errors='replace').replace('"', "'")[:400]
+        return False, f'console.error("[edit-mode] build failed: {err}");'
+    return True, r.stdout.decode()
 
 CORS = {
     'Access-Control-Allow-Origin': '*',
@@ -54,6 +114,15 @@ class Handler(BaseHTTPRequestHandler):
         if payload is not None:
             self.wfile.write(json.dumps(payload, ensure_ascii=False).encode())
 
+    def _send_js(self, js):
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/javascript; charset=utf-8')
+        self.send_header('Cache-Control', 'no-store')
+        for k, v in CORS.items():
+            self.send_header(k, v)
+        self.end_headers()
+        self.wfile.write(js.encode())
+
     def do_OPTIONS(self):
         self.send_response(204)
         for k, v in CORS.items():
@@ -69,6 +138,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         u = urlparse(self.path)
+        if u.path == '/edit-mode.js':
+            slug = (parse_qs(u.query).get('slug') or [''])[0]
+            ok, js = _render_panel(slug)
+            return self._send_js(js)
         if u.path == '/tov-pending':
             return self._send(200, _read(TOV_REQ, []))
         if u.path == '/tov-poll':
@@ -136,6 +209,6 @@ class Handler(BaseHTTPRequestHandler):
         pass  # silent
 
 
-port = int(sys.argv[1]) if len(sys.argv) > 1 else 8002
-print(f'inbox-server listening on :{port}', flush=True)
-HTTPServer(('', port), Handler).serve_forever()
+PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8002
+print(f'inbox-server listening on :{PORT}', flush=True)
+HTTPServer(('', PORT), Handler).serve_forever()
