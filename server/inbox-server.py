@@ -173,10 +173,17 @@ class Handler(BaseHTTPRequestHandler):
 
         if self.path == '/tov-request':
             body = self._body()
-            rid = 'tov-' + uuid.uuid4().hex[:10]
+            # kind: 'tov-check' (default) — run tov-lint against ToV;
+            #       'rewrite-learn' — (original→rewritten) pair: save verbatim
+            #       to vault/tov-corpus + run tov-learn diff, queue candidates.
+            kind = body.get('kind', 'tov-check')
+            rid = ('learn-' if kind == 'rewrite-learn' else 'tov-') + uuid.uuid4().hex[:10]
             req = {
                 'id': rid,
+                'kind': kind,
                 'text': body.get('text', ''),
+                'original': body.get('original', ''),
+                'rewritten': body.get('rewritten', ''),
                 'selector': body.get('selector', ''),
                 'lang': body.get('lang', 'en'),
                 'slug': body.get('slug', ''),
@@ -196,6 +203,9 @@ class Handler(BaseHTTPRequestHandler):
                 'verdict': body.get('verdict', ''),
                 'score': body.get('score'),
                 'suggestions': body.get('suggestions', []),
+                # rewrite-learn reports: what the learner extracted + corpus path
+                'patterns': body.get('patterns', []),
+                'corpus': body.get('corpus', ''),
             }
             _write(TOV_RES, res)
             # drop it from the pending queue

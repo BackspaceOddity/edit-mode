@@ -58,7 +58,10 @@ async function main() {
   });
   const inner = buildScriptInner({ slug: 'e2e' });
 
-  ok('Visual / Copy / ToV tabs present', full.includes('em-mode-v') && full.includes('em-mode-c') && full.includes('em-mode-t'));
+  ok('Visual / Copy / Rewrite / ToV tabs present', full.includes('em-mode-v') && full.includes('em-mode-c') && full.includes('em-mode-r') && full.includes('em-mode-t'));
+  ok('Rewrite: inline contenteditable + commit', full.includes('renderRewriteBody') && full.includes("setAttribute('contenteditable','true')") && full.includes('commitRewrite'));
+  ok("Rewrite: type:'rewrite' + (original→rewritten) capture", full.includes("type:'rewrite'") && full.includes('rwOrig') && full.includes('rewritten:rewritten'));
+  ok('Rewrite: Send fires ToV-learn round-trip', full.includes('startLearn') && full.includes("kind:'rewrite-learn'") && full.includes('pollLearn'));
   ok('per-comment Send to Claude + Resolve', full.includes('data-send') && full.includes('data-resolve'));
   ok('document-absolute markers', full.includes('position:absolute'));
   ok('amber inline highlight', full.includes('rgba(214,168,84'));
@@ -126,6 +129,16 @@ async function main() {
     ok('/tov-poll returns the verdict after /tov-result', pollAfter.verdict === 'ok' && pollAfter.score === 82 && pollAfter.suggestions?.length === 1);
     const pendingAfter = await (await fetch(`${BASE}/tov-pending`)).json();
     ok('request drained from /tov-pending after result', Array.isArray(pendingAfter) && !pendingAfter.some(r => r.id === reqRes.id));
+
+    // rewrite-learn loop: kind discriminator + original/rewritten passthrough → learn- id
+    const learnRes = await (await fetch(`${BASE}/tov-request`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'rewrite-learn', text: 'мой переписанный текст', original: 'AI draft text', rewritten: 'мой переписанный текст', lang: 'ru', slug: 'e2e', selector: 'p' }) })).json();
+    ok('rewrite-learn request gets a learn- id', typeof learnRes.id === 'string' && learnRes.id.startsWith('learn-'));
+    const learnPending = await (await fetch(`${BASE}/tov-pending`)).json();
+    const lr = Array.isArray(learnPending) ? learnPending.find(r => r.id === learnRes.id) : null;
+    ok('rewrite-learn carries kind + original + rewritten', !!lr && lr.kind === 'rewrite-learn' && lr.original === 'AI draft text' && lr.rewritten === 'мой переписанный текст');
+    await fetch(`${BASE}/tov-result`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: learnRes.id, verdict: 'saved to corpus', patterns: ['prefers active verbs', 'drops hedges'] }) });
+    const learnPoll = await (await fetch(`${BASE}/tov-poll?id=${learnRes.id}`)).json();
+    ok('rewrite-learn report polls back (verdict + patterns)', learnPoll.verdict === 'saved to corpus' && Array.isArray(learnPoll.suggestions || learnPoll.patterns));
   } finally {
     proc.kill('SIGKILL');
     for (const f of ['_edit-inbox.json', '_tov-requests.json', '_tov-results.json']) {
