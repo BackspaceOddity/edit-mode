@@ -4,6 +4,16 @@ Reverse-chronological. Each `##` is a session. Added retroactively from git hist
 
 ---
 
+## 2026-06-09 — static-HTML live loader (/edit-mode.js) + JetBrains root-cause
+
+**Package (`1b23b5b`):** `inbox-server.py` now serves `GET /edit-mode.js?slug=x` — builds the canonical panel live via `buildScriptInner(config)` from the installed package (config from `edit-mode.config.json` beside the server). Self-contained (shells to `node`); works whether the server is copied into a project or run from the package. Verified: `200 application/javascript`, full panel.
+
+**Skill (`87cb698`, Second Brain):** `edit-mode-panel` SKILL.md documents the static-HTML live-loader as the canonical path for hand-served prototypes (one `<script src>` tag, no inlining); skill-bundled `inbox-server.py` synced.
+
+**Root cause (JetBrains prototype, cross-project):** `jetbrains-campaign-intelligence` is a hand-authored `index.html` served by `python -m http.server` — no build step, so a prior session **inlined a frozen, near-empty-config snapshot** of the panel (looked "cut-down": only 2 Tweaks controls), and an agent spent ~30 min regex-patching it before reading the skill. Applied the loader there: removed the 44.5KB inlined block → one loader tag; lifted baked config into `edit-mode.config.json` (9 sizes / 3 LHs / 7 weights / 2 families); reinstalled package (dist sha matches canon); restarted inbox-server :8002. **In-browser verified:** 12 range sliders + 7 weight selects + 2 font pickers + Visual/Copy/ToV switcher + draggable dialog. (JetBrains repo left uncommitted — parallel session owns that tree.)
+
+**Filed:** BSO-585 comment — static-HTML loader landed; AC#4 (AI Skills Landing) is the same class, now unblocked via this path.
+
 ## 2026-06-05 — font system, dialog UX, editable source, Monitor inbox root-cause
 
 **Package (`29f1a2a`→`a7e4c3f`, all on `main`):**
@@ -138,3 +148,11 @@ Auto-batch /wrap-all.
 ### 2026-06-08 — orphan session rolled up (PID no longer alive)
 
 - Timeline file `2026-06-08-1809-90474-yegorkorobeynikov.md` had 1 user prompts, 1 tool calls, 0 errors. Full raw log has been deleted (retention policy).
+
+### 2026-06-09 — orphan session rolled up (PID no longer alive)
+
+- Timeline file `2026-06-09-0103-50205-yegorkorobeynikov.md` had 1 user prompts, 20 tool calls, 0 errors. Full raw log has been deleted (retention policy).
+
+### 2026-06-09 — orphan session rolled up (PID no longer alive)
+
+- Timeline file `2026-06-09-1847-39164-yegorkorobeynikov.md` had 2 user prompts, 8 tool calls, 0 errors. Full raw log has been deleted (retention policy).
