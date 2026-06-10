@@ -1,68 +1,53 @@
 # edit-mode — Current State
 
-**Last updated:** 2026-06-05
-**Status:** Active development — canonical Edit Mode being shaped via the live BSO Website surface
+**Last updated:** 2026-06-10
+**Status:** Active development — canonical Edit Mode, single-source package
 **Client/Context:** Internal — Backspace Oddity (web tooling)
-
-## Latest session (2026-06-05) — font system, dialog UX, source-text edit, Monitor root-cause
-
-Landed in package (all pushed to `main`, latest `a7e4c3f`):
-- **Font family picker** (`29f1a2a`) — `queryLocalFonts()` loads all Font Book fonts into datalists; `tweaks.fontFamilies[]` config; each row drives a CSS var; falls back to text input if API blocked.
-- **Configurable `weightOptions`** (`b0d83dd`) — override the default Regular/Medium/Bold/Italic with any font's full weight range (used for all 16 GT Eesti Pro variants); passes through to WOPTS in the IIFE via `JSON.stringify`.
-- **Stacked font-family rows** (`9f5405d`) — label above, full-width input below, so long font names aren't truncated.
-- **Draggable dialog** (`83b78a8`) — 3-dot handle, grab+drag anywhere, clamped to viewport.
-- **Editable source text in Copy mode** (`a7e4c3f`) — SOURCE row is a `<textarea>`, blur saves to `sourceText` + updates live element.
-
-Consumer-side (BSO Website, branch `yegor/bso-557-...`, latest `70695cd`):
-- `chrome.ts` supplies `GT_EESTI_WEIGHTS` (16 variants) + `BSO_FONT_FAMILIES` + `.step-title`/`.step-desc` added to `BSO_TOKEN_MAP` (step headings now appear in Tweaks).
-- `styles.ts` + `public/fonts/` — 20 new GT Eesti TTFs + 23 `@font-face` declarations so the weight dropdown maps to actually-loaded faces (showing an unloaded weight silently falls back).
-
-**Monitor inbox root-cause (cross-project, fixed in SKILL.md):** Urembo session's Monitor watched `_edit-threads.json` while `inbox-server.py` writes `_edit-inbox.json` → 24 comments never surfaced. SKILL.md now ships one canonical Monitor command watching `_edit-inbox.json` + `_tov-requests.json`.
 
 ## What This Project Is
 
-Inline text editing & visual edit picker for Next.js — component library for the Visual Edits Protocol. Goal: become the **single canonical Edit Mode** every project sources, instead of per-project forks.
+`@backspace-oddity/edit-mode` — canonical Edit Mode panel as a single-source npm package. Every project (static HTML, Next.js route handler, React app) sources the same panel via `buildScript(config)` / `buildScriptInner(config)`. Provides Visual/Copy/Rewrite/ToV tabs, Tweaks panel, per-comment Send to Claude / Resolve, ToV-lint writeback, and a personal ToV learning loop (Rewrite → diff → pattern candidates → morning digest approval).
 
-## Current Status (2026-06-03)
+## Current Status
 
-The canonical Edit Mode currently lives, in its most complete form, in **BSO Website** at `lib/proposal-workspace/chrome.ts` (an IIFE injected dev-only via `WS_EDIT_MODE=1`). Today's session rebuilt its comment UX to the Notion/Figma model and added a ToV-lint tab. This repo's React components (`src/`) are now behind chrome.ts and lack the Tweaks panel — convergence is the open architectural step.
+**Package on `main` (`315590c`):** Fully functional. Last fix: viewport clamp for pick dialog and thread card — dialog was using hardcoded height estimates (300px / 180px) before `renderBody()` filled content; added `clampToViewport(el)` with `requestAnimationFrame` to re-clamp based on actual rendered height.
 
-**Today's work (landed in BSO Website, branch `yegor/bso-557-...`):**
-- `4ea7b97` — Notion-style annotations: per-comment Send/Resolve cards; ToV-check tab with CC writeback channel; `inbox-server.py` extended (merge `/inbox` + `/tov-request` `/tov-pending` `/tov-result` `/tov-poll` `/health`).
-- `886ce76` — faithful Notion model: amber inline highlight on commented text + comment-bubble markers; dropped redundant counter chip.
-- `b9039cb` — fixed cssSel `:nth-of-type` (same-tag index) + **document-absolute** marker positioning so comments sit beside their block and scroll with the page (was fixed+clamp → piled in corner).
+**Convergence (BSO-585) — 4/5 AC:**
+- ✅ AC#1 — canonical `buildScript(config)` package, server-safe `./build-script` entry
+- ✅ AC#2 — BSO Website migrated (`chrome.ts`)
+- ✅ AC#3 — Stape migrated (`app/layout.tsx`)
+- ⬜ AC#4 — AI Skills Landing — not yet migrated (now unblocked via static-HTML live loader)
+- ✅ AC#5 — `edit-mode-panel` SKILL.md rewritten, canonical paths documented
 
-**Closed today:** BSO-563 (converge proposal-workspace Edit Mode — Tweaks + Visual/Copy).
+**Tests:** `test:e2e` 35/35 (includes Rewrite/ToV round-trips), `test:e2e:browser` 11/11
 
-## Convergence (BSO-585) — IN PROGRESS, 3/5 AC + full test coverage + UX polish
+**Rewrite mode + ToV learning loop (BSO-613):** Live. Rewrite tab → inline contenteditable → on Send: saves verbatim to `Second Brain/vault/tov-corpus/`, extracts candidate patterns via `tov-learn` (diff mode), queues in `DIGEST-STATE.json → pending_tov_patterns[]` for morning digest approval. Immediate feedback rendered in card ("Learned · saved to corpus").
 
-Approved 2026-06-03 (after Yegor opened Stape and saw the OLD Edit Mode — root cause: every project had its own fork, nothing shared). This repo is now the single source.
-
-- ✅ **AC#1 — canonical package.** `@backspace-oddity/edit-mode` exports `buildScript(config)` + `buildScriptInner(config)` from a **server-safe** `./build-script` entry (no `'use client'` banner). Panel chrome vars namespaced `--emc-*` with fallback to host vars; Tweaks/tokenMap/theme configurable. Built, smoke-tested.
-- ✅ **AC#2 — BSO Website** migrated: `lib/proposal-workspace/chrome.ts` imports `buildScript`, only supplies BSO tokens + tokenMap. Verified live :3131 = 200, full panel.
-- ✅ **AC#3 — Stape** migrated: `app/layout.tsx` injects `buildScriptInner({slug:'stape'})` (dev-only), old VisualEditPicker pill removed. Verified live :3850 = 200, canonical panel, old pill gone. `EditModeProvider` kept for legacy `EditableText` in HeroV2/WorkThatDisappearsV2.
-- ⬜ **AC#4 — AI Skills Landing** — not yet migrated.
-- ✅ **AC#5 — delivery docs** — skill `edit-mode-panel` rewritten (canonical package path, no panel.js, delivery notes incl. mandatory dev-server restart). README in package TBD.
-
-**Delivery mechanism (decided + documented in skill):** `npm install <path> --install-links` (real copy, not symlink). After rebuild: `rm -rf node_modules/@backspace-oddity && npm install <path> --install-links` **+ restart dev server**. Running dev server doesn't pick up node_modules changes — both steps are inseparable.
-
-**End-to-end coverage (added 2026-06-04):**
-- `npm run test:e2e` — 23/23: package exports, full panel markup, server/React isolation, inbox merge, ToV round-trip, clean github-install.
-- `npm run test:e2e:browser` — 11/11: real chromium, Edit button, element-pick→Save→pin+highlight in live DOM, card stays open after Save, collapses on outside-click, ToV browser→inbox→result→poll→page.
-
-**UX improvement (2026-06-04):** card stays open after Save so user can hit "Send to Claude" immediately; collapses only on click outside the panel. In canon, propagated to all consumers via package.
-
-## Follow-ups (separate)
-
-- Retire `EditableText`/`useEditMode` from Stape `components/v2*` so the old `lib/edit-mode/` fork can be deleted entirely (currently coexists behind the provider).
-- Background dev servers launched this session (:3131 BSO Website, :3850 Stape) may not persist — relaunch with each project's dev command + `WS_EDIT_MODE=1` (BSO Website) when needed.
+**Static-HTML live loader (`1b23b5b`):** `inbox-server.py` serves `GET /edit-mode.js?slug=x` — builds canonical panel live from installed package. Static prototypes use one `<script src>` tag; no inlining, no drift.
 
 ## Key Files
 
-- BSO Website `lib/proposal-workspace/chrome.ts` — current canonical Edit Mode (IIFE)
-- BSO Website `inbox-server.py` — inbox + ToV channel on :8002
-- `src/context.tsx`, `src/VisualEditPicker.tsx` — React components (pre-Tweaks, behind chrome.ts)
+- `src/buildScript.ts` — IIFE generator; all panel logic lives here
+- `server/inbox-server.py` — inbox + ToV + Rewrite-learn + `/edit-mode.js` live loader
+- `test/e2e.mjs` — 35 string assertions + 3 server round-trip tests
+- `edit-mode.config.json` — project-level Tweaks/tokenMap config for `inbox-server.py` live loader
+- `.project-journal/CHANGELOG.md` — session history
+
+## Open Issues
+
+1. **AC#4 (BSO-585):** AI Skills Landing still needs live-loader migration (same class as JetBrains — static HTML). Unblocked.
+2. **Stape cleanup:** `EditableText`/`useEditMode` still exist behind `EditModeProvider`; can be deleted once Stape fully cuts over to the package.
+
+## Next Steps
+
+1. Migrate AI Skills Landing to live loader (BSO-585 AC#4) — one `<script src>` tag + `edit-mode.config.json`
+2. `npm run build` → `npm install --install-links` → restart dev server after any `src/` change (the two-step is inseparable)
+3. Morning digest: review 3 pending ToV pattern candidates from the 2026-06-09 JetBrains rewrite session
 
 ## How to Resume
 
-Fresh CC session in this folder → `/resume`. The live surface to test/iterate is BSO Website `/w/<client>` with `WS_EDIT_MODE=1` + `inbox-server.py` on :8002.
+```
+/resume
+```
+
+Live test surface: http://127.0.0.1:8080/index.html (JetBrains prototype, `python -m http.server 8080` in that project). Inbox server must be running on :8002 (`python3 inbox-server.py 8002` from BSO Website or from `server/` here). The `clampToViewport` fix is live in the served panel.

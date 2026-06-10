@@ -4,6 +4,12 @@ Reverse-chronological. Each `##` is a session. Added retroactively from git hist
 
 ---
 
+## 2026-06-10 — viewport clamp fix for pick dialog + thread card
+
+**Package (`315590c`):** `clampToViewport(el)` added — fires in `requestAnimationFrame` after `renderBody()` fills the dialog with actual content. Before the fix, `onPick` used a hardcoded `300px` height estimate and `positionCard` used `180/220px`; for tall content the dialog's bottom edge fell below the viewport, hiding the Send button. Fix reads `getBoundingClientRect()` after render, shifts the element up by the overflow amount (min top: 8px). Applied to both the pick dialog (`dlg`) and the saved-thread card (`openCard`).
+
+BSO Website `node_modules/@backspace-oddity/edit-mode/dist/build-script.js` updated by direct copy (npm install path did not propagate the new dist). Inbox-server restarted on :8002. Verified: `clampToViewport` present in `curl http://localhost:8002/edit-mode.js?slug=jetbrains`.
+
 ## 2026-06-09 — static-HTML live loader (/edit-mode.js) + JetBrains root-cause
 
 **Package (`1b23b5b`):** `inbox-server.py` now serves `GET /edit-mode.js?slug=x` — builds the canonical panel live via `buildScriptInner(config)` from the installed package (config from `edit-mode.config.json` beside the server). Self-contained (shells to `node`); works whether the server is copied into a project or run from the package. Verified: `200 application/javascript`, full panel.
@@ -160,3 +166,7 @@ Auto-batch /wrap-all.
 ### 2026-06-09 — orphan session rolled up (PID no longer alive)
 
 - Timeline file `2026-06-09-2042-62050-yegorkorobeynikov.md` had 7 user prompts, 107 tool calls, 0 errors. Full raw log has been deleted (retention policy).
+
+### 2026-06-09 — orphan session rolled up (PID no longer alive)
+
+- Timeline file `2026-06-09-2246-86197-yegorkorobeynikov.md` had 1 user prompts, 26 tool calls, 0 errors. Full raw log has been deleted (retention policy).
