@@ -1,6 +1,6 @@
 # edit-mode — Current State
 
-**Last updated:** 2026-06-10
+**Last updated:** 2026-06-17
 **Status:** Active development — canonical Edit Mode, single-source package
 **Client/Context:** Internal — Backspace Oddity (web tooling)
 
@@ -10,7 +10,9 @@
 
 ## Current Status
 
-**Package on `main` (`315590c`):** Fully functional. Last fix: viewport clamp for pick dialog and thread card — dialog was using hardcoded height estimates (300px / 180px) before `renderBody()` filled content; added `clampToViewport(el)` with `requestAnimationFrame` to re-clamp based on actual rendered height.
+**Package on `main` (`12da290`):** Fully functional. Two Rewrite mode fixes applied this session:
+- `2c3d220` — marker persisted after Send in Rewrite mode: thread deletion + marker cleanup were in an `else` branch, so they didn't run when Rewrite learning was triggered. Moved to always run after `startLearn()`.
+- `12da290` — switching from Rewrite to Visual collapsed page layout: `el.textContent = rwOrig` on a container with child elements destroys markup. Added `rwOrigHtml` (saves `innerHTML` on contenteditable start), `endRewrite(restore)` now uses `el.innerHTML = rwOrigHtml`.
 
 **Convergence (BSO-585) — 4/5 AC:**
 - ✅ AC#1 — canonical `buildScript(config)` package, server-safe `./build-script` entry
@@ -25,6 +27,8 @@
 
 **Static-HTML live loader (`1b23b5b`):** `inbox-server.py` serves `GET /edit-mode.js?slug=x` — builds canonical panel live from installed package. Static prototypes use one `<script src>` tag; no inlining, no drift.
 
+**Tweaks architecture (confirmed 2026-06-17):** Tweaks sets CSS variables only on `document.documentElement` (`:root`). One slider → one token → all elements using that token move together. `tokenMap` / `tokenForEl` is for UX context only (maps a clicked element to its token name for display) — NOT for per-element override. Per-element control requires a visual comment (sends a specific request to Claude with element selector). This is by design — the token model is for systematic design exploration.
+
 ## Key Files
 
 - `src/buildScript.ts` — IIFE generator; all panel logic lives here
@@ -37,12 +41,13 @@
 
 1. **AC#4 (BSO-585):** AI Skills Landing still needs live-loader migration (same class as JetBrains — static HTML). Unblocked.
 2. **Stape cleanup:** `EditableText`/`useEditMode` still exist behind `EditModeProvider`; can be deleted once Stape fully cuts over to the package.
+3. **JetBrains Engagement Workshop bug stream:** Yegor working actively with the page — more fixes may come via this session.
 
 ## Next Steps
 
 1. Migrate AI Skills Landing to live loader (BSO-585 AC#4) — one `<script src>` tag + `edit-mode.config.json`
-2. `npm run build` → `npm install --install-links` → restart dev server after any `src/` change (the two-step is inseparable)
-3. Morning digest: review 3 pending ToV pattern candidates from the 2026-06-09 JetBrains rewrite session
+2. Continue JetBrains Engagement Workshop bug stream as Yegor reports more issues
+3. `npm run build` → `cp dist/build-script.js node_modules/.../dist/build-script.js` → restart inbox-server after any `src/` change
 
 ## How to Resume
 
@@ -50,4 +55,4 @@
 /resume
 ```
 
-Live test surface: http://127.0.0.1:8080/index.html (JetBrains prototype, `python -m http.server 8080` in that project). Inbox server must be running on :8002 (`python3 inbox-server.py 8002` from BSO Website or from `server/` here). The `clampToViewport` fix is live in the served panel.
+Live test surface: http://127.0.0.1:8080/index.html (JetBrains prototype, `python -m http.server 8080` in that project). Inbox server must be running on :8002 (`python3 inbox-server.py 8002` from BSO Website or from `server/` here). Both Rewrite mode fixes are live on `main`.

@@ -4,6 +4,21 @@ Reverse-chronological. Each `##` is a session. Added retroactively from git hist
 
 ---
 
+## 2026-06-17 — Rewrite mode bug fixes (marker + layout) + Tweaks architecture confirmation
+
+**What happened:**
+- `2c3d220` — fix: marker did not disappear after "Send to Claude" in Rewrite mode. Root: `delete dd.threads[id]` + `renderMarkers()` were inside the `else` branch (ran only when NOT rewriting). Moved to always execute after `startLearn()` — learning fires in background, UI cleans up immediately.
+- `12da290` — fix: switching from Rewrite to Visual mode collapsed all page text into one block. Root: `endRewrite(true)` used `el.textContent = rwOrig` (plain text), destroying child element markup. Added `rwOrigHtml` variable (stores `innerHTML` when contenteditable activates); restore now uses `el.innerHTML = rwOrigHtml`.
+- zap-site-mirror `node_modules/@backspace-oddity/edit-mode/dist/build-script.js` updated by direct copy.
+- Post-compact journal cleanup: committed 4 uncommitted journal files.
+- Confirmed Tweaks architecture: global CSS variables on `:root` only; `tokenMap`/`tokenForEl` is UX labeling, not per-element override.
+
+**Decisions made:**
+- Tweaks panel is intentionally token-model only. Per-element weight control requires visual comments, not a Tweaks feature.
+
+**Result:**
+- Both Rewrite mode bugs fixed and on `main`. Package at `12da290`.
+
 ## 2026-06-10 — viewport clamp fix for pick dialog + thread card
 
 **Package (`315590c`):** `clampToViewport(el)` added — fires in `requestAnimationFrame` after `renderBody()` fills the dialog with actual content. Before the fix, `onPick` used a hardcoded `300px` height estimate and `positionCard` used `180/220px`; for tall content the dialog's bottom edge fell below the viewport, hiding the Send button. Fix reads `getBoundingClientRect()` after render, shifts the element up by the overflow amount (min top: 8px). Applied to both the pick dialog (`dlg`) and the saved-thread card (`openCard`).
@@ -178,3 +193,7 @@ Auto-batch /wrap-all.
 ### 2026-06-10 — orphan session rolled up (PID no longer alive)
 
 - Timeline file `2026-06-10-1749-14644-yegorkorobeynikov.md` had 3 user prompts, 31 tool calls, 0 errors. Full raw log has been deleted (retention policy).
+
+### 2026-06-15 — orphan session rolled up (PID no longer alive)
+
+- Timeline file `2026-06-15-1118-66838-yegorkorobeynikov.md` had 5 user prompts, 32 tool calls, 0 errors. Full raw log has been deleted (retention policy).
