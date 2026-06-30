@@ -1,6 +1,6 @@
 {
   "name": "@backspace-oddity/edit-mode",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Inline text editing & visual edit picker for Next.js — Notion-style variants + Lovable-style visual prompts",
   "license": "MIT",
   "repository": {

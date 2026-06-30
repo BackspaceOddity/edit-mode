@@ -137,8 +137,10 @@ export function buildScriptInner(cfg: EditModeConfig): string {
   function persist(d){ d.savedAt=new Date().toISOString(); localStorage.setItem(STORE,JSON.stringify(d)); }
   function mk(t){ return document.createElement(t); }
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  function cssSel(el){ if(el.id) return '#'+el.id; var path=[],n=el; while(n&&n!==document.body&&path.length<5){ if(n.id){path.unshift('#'+n.id);break;} var seg=n.tagName.toLowerCase(); var par=n.parentElement; if(par){ var same=Array.prototype.filter.call(par.children,function(c){return c.tagName===n.tagName;}); if(same.length>1) seg+=':nth-of-type('+(Array.prototype.indexOf.call(same,n)+1)+')'; } path.unshift(seg); n=par; } return path.join(' > '); }
-  function findEl(t){ var sels=[t.selector,(t.element&&t.element.selector)]; for(var i=0;i<sels.length;i++){ if(!sels[i])continue; try{ var el=document.querySelector(sels[i]); if(el) return el; }catch(e){} } return null; }
+  function cssSel(el){ if(el.id) return '#'+el.id; var path=[],n=el,anchored=false; while(n&&n.nodeType===1&&n!==document.body){ if(n.id){ path.unshift('#'+n.id); anchored=true; break; } var seg=n.tagName.toLowerCase(); var par=n.parentElement; if(par){ var same=Array.prototype.filter.call(par.children,function(c){return c.tagName===n.tagName;}); if(same.length>1) seg+=':nth-of-type('+(Array.prototype.indexOf.call(same,n)+1)+')'; } path.unshift(seg); n=par; } if(!anchored&&n===document.body) path.unshift('body'); return path.join(' > '); }
+  function findEl(t){ var want=(t.element&&t.element.textContent)||''; var wantTag=(t.element&&t.element.tag)||''; var sels=[t.selector,(t.element&&t.element.selector)]; for(var i=0;i<sels.length;i++){ if(!sels[i])continue; try{ var el=document.querySelector(sels[i]); if(el){ if(!want||(el.textContent||'').trim().slice(0,120)===want) return el; } }catch(e){} }
+    if(want){ var nodes=document.querySelectorAll(wantTag||'*'); for(var j=0;j<nodes.length;j++){ var nd=nodes[j]; if(nd.closest&&(nd.closest('.em-ui')||nd.closest('[data-em-marker]')))continue; if(nd.offsetParent!==null&&(nd.textContent||'').trim().slice(0,120)===want) return nd; } }
+    try{ return document.querySelector(sels[0]); }catch(e){ return null; } }
   function langOf(s){ return /[\\u0400-\\u04FF]/.test(s||'') ? 'ru' : 'en'; }
 
   var editBtn=mk('button'); editBtn.className='em-ui'; editBtn.innerHTML='&#9998; Edit';
